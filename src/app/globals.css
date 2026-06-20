@@ -1,0 +1,214 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 239 84% 59%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 258 79% 58%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 239 84% 59%;
+    --radius: 0.75rem;
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 239 84% 59%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 258 79% 58%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 217 32% 17%;
+    --sidebar-ring: 239 84% 59%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    pointer-events: auto !important;
+  }
+}
+
+.font-headline {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media print {
+  /* Hide main application layout wrapper specifically */
+  .group\/sidebar-wrapper,
+  .print-hidden {
+    display: none !important;
+  }
+
+  /* Hide dialog backdrop overlays, focus guards, close buttons specifically */
+  div[data-state="open"] > div[class*="bg-black/80"],
+  div[class*="bg-black/80"],
+  .fixed.inset-0.z-50.bg-black\/80,
+  div[role="dialog"] button,
+  div[role="dialog"] [class*="absolute right-4 top-4"],
+  div[role="dialog"] .DialogClose {
+    display: none !important;
+    opacity: 0 !important;
+  }
+
+  /* Reset Radix Dialog Content styles to sit cleanly on the printed page */
+  div[role="dialog"] {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure ScrollArea allows full content visibility and does not overflow/clip */
+  div[role="dialog"] [class*="max-h-[85vh]"],
+  div[role="dialog"] .ScrollArea,
+  div[role="dialog"] [data-radix-scroll-area-viewport] {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide scrollbars completely on print */
+  div[role="dialog"] [class*="scrollbar"],
+  div[role="dialog"] [class*="ScrollAreaScrollbar"],
+  html, body {
+    scrollbar-width: none !important;
+  }
+  
+  html, body::-webkit-scrollbar,
+  div[role="dialog"] [class*="scrollbar"]::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Define page margins and dimensions for A4 */
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Force browsers to print original colors, borders, and background-colors */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Optimize invoice container dimensions for printing */
+  #invoice-capture {
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    color: black !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+
+/* Custom premium scrollbar for navigation sidebar */
+[data-sidebar="content"] {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Custom premium design active state and left indicator border for Sidebar links */
+[data-sidebar="menu-button"] {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+[data-sidebar="menu-button"]:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: var(--sidebar-foreground) !important;
+}
+
+[data-sidebar="menu-button"][data-active="true"] {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25) !important;
+}
+
+[data-sidebar="menu-button"][data-active="true"]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 25%;
+  height: 50%;
+  width: 3px;
+  background-color: #ffffff;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Hide indicators when collapsed */
+[data-state="collapsed"] [data-sidebar="menu-button"][data-active="true"]::before {
+  display: none !important;
+}

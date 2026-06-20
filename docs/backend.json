@@ -1,0 +1,60 @@
+
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Information about a student enrolled in the institute.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the student"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Contact email address"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number"
+        },
+        "batch": {
+          "type": "string",
+          "description": "Assigned batch (e.g., Batch Alpha)"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Active",
+            "Inactive",
+            "On Leave"
+          ],
+          "description": "Enrollment status"
+        },
+        "joinedDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Date student joined the institute"
+        }
+      },
+      "required": [
+        "name",
+        "email",
+        "batch",
+        "status"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "google"
+    ]
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Collection of student records"
+    }
+  }
+}

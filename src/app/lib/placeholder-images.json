@@ -1,0 +1,23 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "institute-logo",
+      "description": "TuitionFlow Institute Logo",
+      "imageUrl": "https://picsum.photos/seed/tuitionflow/200/200",
+      "imageHint": "education logo"
+    },
+    {
+      "id": "student-avatar-1",
+      "description": "Student Avatar 1",
+      "imageUrl": "https://picsum.photos/seed/stud1/100/100",
+      "imageHint": "student portrait"
+    },
+    {
+      "id": "student-avatar-2",
+      "description": "Student Avatar 2",
+      "imageUrl": "https://picsum.photos/seed/stud2/100/100",
+      "imageHint": "student portrait"
+    }
+  ]
+}
