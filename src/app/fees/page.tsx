@@ -661,7 +661,7 @@ export default function FeesPage() {
                     <Building2 className="size-7 sm:size-8" />
                   </div>
                   <div className="space-y-0.5">
-                    <h2 className="text-xl sm:text-2xl print:text-2xl font-headline font-bold text-primary tracking-tight">TuitionFlow Academy</h2>
+                    <h2 className="text-xl sm:text-2xl print:text-2xl font-headline font-bold text-primary tracking-tight">Coaching OS Academy</h2>
                     <p className="text-[10px] sm:text-xs print:text-xs text-muted-foreground font-semibold uppercase tracking-[0.2em]">Excellence in Education</p>
                     <p className="text-[9px] sm:text-[10px] print:text-[10px] text-muted-foreground/80 mt-1">123 Learning Street, Tech City, 400001</p>
                   </div>
@@ -762,8 +762,8 @@ export default function FeesPage() {
               <Separator className="bg-border/30" />
               
               <div className="text-center space-y-1">
-                <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-[0.3em]">Thank you for choosing TuitionFlow</p>
-                <p className="text-[8px] text-muted-foreground font-medium">For support: support@tuitionflow.edu | +91 000-000-0000</p>
+                <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-[0.3em]">Thank you for choosing Coaching OS</p>
+                <p className="text-[8px] text-muted-foreground font-medium">For support: support@coachingos.edu | +91 000-000-0000</p>
               </div>
             </div>
           </ScrollArea>

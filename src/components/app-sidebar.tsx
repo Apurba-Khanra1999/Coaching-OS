@@ -175,6 +175,7 @@ export function AppSidebar() {
         label: "General",
         items: [
           { name: "Notifications", icon: Bell, href: "/notifications" },
+          { name: "Settings", icon: Settings, href: "/settings" },
         ]
       }
     ]
@@ -210,6 +211,7 @@ export function AppSidebar() {
         label: "General",
         items: [
           { name: "Notifications", icon: Bell, href: "/notifications" },
+          { name: "Settings", icon: Settings, href: "/settings" },
         ]
       }
     ]
@@ -219,8 +221,8 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar shadow-xl">
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:p-2 flex flex-col items-start gap-3">
         <div className="flex items-center gap-3 w-full justify-start">
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0">
-            <BookOpen className="size-5" />
+          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-white border border-slate-200/50 p-1 shrink-0 overflow-hidden shadow-xs">
+            <img src="/logo.png" alt="Coaching OS Logo" className="size-full object-contain" />
           </div>
           <div className="flex flex-col gap-0.5 overflow-hidden group-data-[collapsible=icon]:hidden w-full">
             <span className="font-headline font-bold text-base leading-none tracking-tight">Coaching OS</span>

@@ -25,10 +25,10 @@ interface PlatformInvoice {
 export default function PlatformBillingPage() {
   const { toast } = useToast()
   const [invoices, setInvoices] = React.useState<PlatformInvoice[]>([
-    { invoiceId: "PINV-001", tenantName: "TuitionFlow Academy", amount: 15000, date: "2026-06-01", status: "Paid", plan: "Enterprise Premium" },
+    { invoiceId: "PINV-001", tenantName: "Coaching OS Academy", amount: 15000, date: "2026-06-01", status: "Paid", plan: "Enterprise Premium" },
     { invoiceId: "PINV-002", tenantName: "Apex Science Institute", amount: 15000, date: "2026-06-01", status: "Paid", plan: "Enterprise Premium" },
     { invoiceId: "PINV-003", tenantName: "Horizon Prep Academy", amount: 15000, date: "2026-06-01", status: "Paid", plan: "Enterprise Premium" },
-    { invoiceId: "PINV-004", tenantName: "TuitionFlow Academy", amount: 15000, date: "2026-05-01", status: "Paid", plan: "Enterprise Premium" },
+    { invoiceId: "PINV-004", tenantName: "Coaching OS Academy", amount: 15000, date: "2026-05-01", status: "Paid", plan: "Enterprise Premium" },
     { invoiceId: "PINV-005", tenantName: "Apex Science Institute", amount: 15000, date: "2026-05-01", status: "Paid", plan: "Enterprise Premium" },
     { invoiceId: "PINV-006", tenantName: "Horizon Prep Academy", amount: 15000, date: "2026-05-01", status: "Pending", plan: "Enterprise Premium" }
   ])

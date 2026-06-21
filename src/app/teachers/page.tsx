@@ -65,11 +65,11 @@ const batchOptions = [
 ]
 
 const initialTeachers: Teacher[] = [
-  { id: "T-001", name: "Dr. Priya Sharma", email: "priya@tuitionflow.edu", phone: "+91 98765 00001", subject: "Mathematics", qualification: "Ph.D Mathematics", payType: "monthly", payAmount: "45000", status: "Active", assignedBatches: ["batch-alpha"], joinDate: "2024-01-15", rating: 4.8 },
-  { id: "T-002", name: "Rajesh Kumar", email: "rajesh@tuitionflow.edu", phone: "+91 98765 00002", subject: "Physics", qualification: "M.Sc Physics", payType: "batchwise", payAmount: "12000", status: "Active", assignedBatches: ["batch-beta"], joinDate: "2024-03-01", rating: 4.5 },
-  { id: "T-003", name: "Anita Desai", email: "anita@tuitionflow.edu", phone: "+91 98765 00003", subject: "Chemistry", qualification: "M.Sc Chemistry", payType: "monthly", payAmount: "40000", status: "On Leave", assignedBatches: ["batch-gamma"], joinDate: "2023-08-20", rating: 4.7 },
-  { id: "T-004", name: "Suresh Patel", email: "suresh@tuitionflow.edu", phone: "+91 98765 00004", subject: "Biology", qualification: "M.Sc Biology", payType: "daily", payAmount: "2500", status: "Active", assignedBatches: ["batch-delta", "batch-beta"], joinDate: "2024-06-10", rating: 4.2 },
-  { id: "T-005", name: "Meena Gupta", email: "meena@tuitionflow.edu", phone: "+91 98765 00005", subject: "English", qualification: "M.A English", payType: "monthly", payAmount: "35000", status: "Active", assignedBatches: ["batch-alpha", "batch-gamma"], joinDate: "2023-11-05", rating: 4.9 },
+  { id: "T-001", name: "Dr. Priya Sharma", email: "priya@coachingos.edu", phone: "+91 98765 00001", subject: "Mathematics", qualification: "Ph.D Mathematics", payType: "monthly", payAmount: "45000", status: "Active", assignedBatches: ["batch-alpha"], joinDate: "2024-01-15", rating: 4.8 },
+  { id: "T-002", name: "Rajesh Kumar", email: "rajesh@coachingos.edu", phone: "+91 98765 00002", subject: "Physics", qualification: "M.Sc Physics", payType: "batchwise", payAmount: "12000", status: "Active", assignedBatches: ["batch-beta"], joinDate: "2024-03-01", rating: 4.5 },
+  { id: "T-003", name: "Anita Desai", email: "anita@coachingos.edu", phone: "+91 98765 00003", subject: "Chemistry", qualification: "M.Sc Chemistry", payType: "monthly", payAmount: "40000", status: "On Leave", assignedBatches: ["batch-gamma"], joinDate: "2023-08-20", rating: 4.7 },
+  { id: "T-004", name: "Suresh Patel", email: "suresh@coachingos.edu", phone: "+91 98765 00004", subject: "Biology", qualification: "M.Sc Biology", payType: "daily", payAmount: "2500", status: "Active", assignedBatches: ["batch-delta", "batch-beta"], joinDate: "2024-06-10", rating: 4.2 },
+  { id: "T-005", name: "Meena Gupta", email: "meena@coachingos.edu", phone: "+91 98765 00005", subject: "English", qualification: "M.A English", payType: "monthly", payAmount: "35000", status: "Active", assignedBatches: ["batch-alpha", "batch-gamma"], joinDate: "2023-11-05", rating: 4.9 },
 ]
 
 export default function TeachersPage() {

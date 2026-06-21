@@ -63,14 +63,14 @@ interface FeeTransaction {
 }
 
 const initialQRs: QRCodeConfig[] = [
-  { id: "QR-001", label: "Primary Admission QR", upiId: "tuitionflow.fees@okaxis", bankName: "Axis Bank", status: "Active" },
-  { id: "QR-002", label: "Secondary HDFC QR", upiId: "tuitionflow@okhdfc", bankName: "HDFC Bank", status: "Active" },
+  { id: "QR-001", label: "Primary Admission QR", upiId: "coachingos.fees@okaxis", bankName: "Axis Bank", status: "Active" },
+  { id: "QR-002", label: "Secondary HDFC QR", upiId: "coachingos@okhdfc", bankName: "HDFC Bank", status: "Active" },
 ]
 
 const initialTransactions: OnlineTransaction[] = [
-  { id: "TXN-ON-5001", studentName: "Sarah Smith", batch: "Batch Alpha", amount: "500", month: "June 2026", upiIdUsed: "tuitionflow.fees@okaxis", status: "Success", timestamp: "2026-06-18 10:15" },
-  { id: "TXN-ON-5002", studentName: "Alex Brown", batch: "Batch Beta", amount: "500", month: "June 2026", upiIdUsed: "tuitionflow.fees@okaxis", status: "Pending", timestamp: "2026-06-18 11:30" },
-  { id: "TXN-ON-5003", studentName: "Emma Watson", batch: "Batch Alpha", amount: "500", month: "June 2026", upiIdUsed: "tuitionflow@okhdfc", status: "Success", timestamp: "2026-06-17 14:02" },
+  { id: "TXN-ON-5001", studentName: "Sarah Smith", batch: "Batch Alpha", amount: "500", month: "June 2026", upiIdUsed: "coachingos.fees@okaxis", status: "Success", timestamp: "2026-06-18 10:15" },
+  { id: "TXN-ON-5002", studentName: "Alex Brown", batch: "Batch Beta", amount: "500", month: "June 2026", upiIdUsed: "coachingos.fees@okaxis", status: "Pending", timestamp: "2026-06-18 11:30" },
+  { id: "TXN-ON-5003", studentName: "Emma Watson", batch: "Batch Alpha", amount: "500", month: "June 2026", upiIdUsed: "coachingos@okhdfc", status: "Success", timestamp: "2026-06-17 14:02" },
 ]
 
 const MockQRCodeSVG = ({ upiId }: { upiId: string }) => {
@@ -371,8 +371,8 @@ export default function OnlinePaymentsPage() {
   }
 
   const handleShareQR = async (qr: QRCodeConfig) => {
-    const text = `TuitionFlow Academy - Scan & Pay\nUPI ID: ${qr.upiId}\nBank: ${qr.bankName} (${qr.label})`
-    const url = `upi://pay?pa=${qr.upiId}&pn=TuitionFlow%20Academy`
+    const text = `Coaching OS Academy - Scan & Pay\nUPI ID: ${qr.upiId}\nBank: ${qr.bankName} (${qr.label})`
+    const url = `upi://pay?pa=${qr.upiId}&pn=Coaching%20OS%20Academy`
 
     const copyToClipboard = async () => {
       try {
@@ -405,7 +405,7 @@ export default function OnlinePaymentsPage() {
 
       // 3. Prepare share data
       const shareData = {
-        title: `TuitionFlow QR - ${qr.label}`,
+        title: `Coaching OS QR - ${qr.label}`,
         text: `${text}\nPayment Link: ${url}`,
         files: filesArray
       }
@@ -422,7 +422,7 @@ export default function OnlinePaymentsPage() {
         // Try text-only sharing if file sharing fails but navigator.share exists
         if (navigator.share) {
           await navigator.share({
-            title: `TuitionFlow QR - ${qr.label}`,
+            title: `Coaching OS QR - ${qr.label}`,
             text: `${text}\nPayment Link: ${url}`
           })
           toast({

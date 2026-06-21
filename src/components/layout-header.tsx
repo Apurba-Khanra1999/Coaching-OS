@@ -16,7 +16,7 @@ export function LayoutHeader() {
     setMounted(true)
   }, [])
 
-  const tenantName = TENANTS.find(t => t.id === activeTenant)?.name || "TuitionFlow Academy"
+  const tenantName = TENANTS.find(t => t.id === activeTenant)?.name || "Coaching OS Academy"
   const roleName = ROLES.find(r => r.id === activeRole)?.name || "Institute Owner"
 
   return (

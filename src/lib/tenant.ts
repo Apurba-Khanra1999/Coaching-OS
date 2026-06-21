@@ -14,7 +14,7 @@ export interface Role {
 }
 
 export const TENANTS: Tenant[] = [
-  { id: "inst_001", name: "TuitionFlow Academy", tagline: "Educator Portal", logoText: "TuitionFlow" },
+  { id: "inst_001", name: "Coaching OS Academy", tagline: "Educator Portal", logoText: "Coaching OS" },
   { id: "inst_002", name: "Apex Science Institute", tagline: "Science & Tech Portal", logoText: "Apex Academy" },
   { id: "inst_003", name: "Horizon Prep Academy", tagline: "College Prep Portal", logoText: "Horizon Prep" },
 ]
@@ -36,15 +36,15 @@ export interface UserCredential {
 }
 
 export const INITIAL_USER_CREDENTIALS: UserCredential[] = [
-  { email: "admin@tuitionflow.com", role: "super_admin", tenantId: "inst_001", name: "Platform Admin", password: "demopassword" },
+  { email: "admin@coachingos.com", role: "super_admin", tenantId: "inst_001", name: "Platform Admin", password: "demopassword" },
   
   // Owner logins
-  { email: "owner@tuitionflow.edu", role: "owner", tenantId: "inst_001", name: "John Doe (TuitionFlow)", password: "demopassword" },
+  { email: "owner@coachingos.edu", role: "owner", tenantId: "inst_001", name: "John Doe (Coaching OS)", password: "demopassword" },
   { email: "owner@apexscience.edu", role: "owner", tenantId: "inst_002", name: "Dr. Arthur Apex", password: "demopassword" },
   { email: "owner@horizonprep.edu", role: "owner", tenantId: "inst_003", name: "Principal Horizon", password: "demopassword" },
   
   // Teacher logins
-  { email: "sarah.smith@tuitionflow.edu", role: "teacher", tenantId: "inst_001", name: "Prof. Sarah Smith", password: "demopassword" },
+  { email: "sarah.smith@coachingos.edu", role: "teacher", tenantId: "inst_001", name: "Prof. Sarah Smith", password: "demopassword" },
   { email: "priya.sharma@apexscience.edu", role: "teacher", tenantId: "inst_002", name: "Dr. Priya Sharma", password: "demopassword" },
   { email: "anita.desai@horizonprep.edu", role: "teacher", tenantId: "inst_003", name: "Anita Desai", password: "demopassword" },
   
@@ -59,6 +59,19 @@ export const INITIAL_USER_CREDENTIALS: UserCredential[] = [
   { email: "parent@horizon.edu", role: "parent", tenantId: "inst_003", name: "Parent Account (Horizon)", password: "demopassword" }
 ]
 
+function syncToDatabase(key: string, value: any): void {
+  if (typeof window === "undefined") return
+  fetch("/api/db", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ key, value }),
+  }).catch((err) => {
+    console.error(`Failed to sync key ${key} to database:`, err)
+  })
+}
+
 export function getTenants(): Tenant[] {
   if (typeof window === "undefined") return TENANTS
   const saved = localStorage.getItem("tuitionflow_tenants")
@@ -70,12 +83,14 @@ export function getTenants(): Tenant[] {
     }
   }
   localStorage.setItem("tuitionflow_tenants", JSON.stringify(TENANTS))
+  syncToDatabase("tuitionflow_tenants", TENANTS)
   return TENANTS
 }
 
 export function saveTenants(tenantsList: Tenant[]): void {
   if (typeof window === "undefined") return
   localStorage.setItem("tuitionflow_tenants", JSON.stringify(tenantsList))
+  syncToDatabase("tuitionflow_tenants", tenantsList)
 }
 
 export function getUserCredentials(): UserCredential[] {
@@ -89,12 +104,14 @@ export function getUserCredentials(): UserCredential[] {
     }
   }
   localStorage.setItem("tuitionflow_user_credentials", JSON.stringify(INITIAL_USER_CREDENTIALS))
+  syncToDatabase("tuitionflow_user_credentials", INITIAL_USER_CREDENTIALS)
   return INITIAL_USER_CREDENTIALS
 }
 
 export function saveUserCredentials(credentialsList: UserCredential[]): void {
   if (typeof window === "undefined") return
   localStorage.setItem("tuitionflow_user_credentials", JSON.stringify(credentialsList))
+  syncToDatabase("tuitionflow_user_credentials", credentialsList)
 }
 
 // Safely get active tenant from localStorage (handles SSR)
@@ -166,6 +183,7 @@ export function getScopedData<T>(baseKey: string, fallbackGenerator: (tenantId: 
   // If not in localStorage, generate fallback mock data for this tenant and save it
   const fallback = fallbackGenerator(getActiveTenant())
   localStorage.setItem(scopedKey, JSON.stringify(fallback))
+  syncToDatabase(scopedKey, fallback)
   return fallback
 }
 
@@ -174,6 +192,7 @@ export function setScopedData<T>(baseKey: string, data: T): void {
   if (typeof window === "undefined") return
   const scopedKey = getTenantStorageKey(baseKey)
   localStorage.setItem(scopedKey, JSON.stringify(data))
+  syncToDatabase(scopedKey, data)
 }
 
 // ==========================================
@@ -370,11 +389,11 @@ export const mockStudentsGenerator = (tenantId: string): Student[] => {
 
 export const mockTeachersGenerator = (tenantId: string): Teacher[] => {
   const base = [
-    { id: "T-001", name: "Dr. Priya Sharma", email: "priya@tuitionflow.edu", phone: "+91 98765 00001", subject: "Mathematics", qualification: "Ph.D Mathematics", payType: "monthly" as const, payAmount: "45000", status: "Active" as const, assignedBatches: ["batch-alpha"], joinDate: "2024-01-15", rating: 4.8 },
-    { id: "T-002", name: "Rajesh Kumar", email: "rajesh@tuitionflow.edu", phone: "+91 98765 00002", subject: "Physics", qualification: "M.Sc Physics", payType: "batchwise" as const, payAmount: "12000", status: "Active" as const, assignedBatches: ["batch-beta"], joinDate: "2024-03-01", rating: 4.5 },
-    { id: "T-003", name: "Anita Desai", email: "anita@tuitionflow.edu", phone: "+91 98765 00003", subject: "Chemistry", qualification: "M.Sc Chemistry", payType: "monthly" as const, payAmount: "40000", status: "On Leave" as const, assignedBatches: ["batch-gamma"], joinDate: "2023-08-20", rating: 4.7 },
-    { id: "T-004", name: "Suresh Patel", email: "suresh@tuitionflow.edu", phone: "+91 98765 00004", subject: "Biology", qualification: "M.Sc Biology", payType: "daily" as const, payAmount: "2500", status: "Active" as const, assignedBatches: ["batch-delta", "batch-beta"], joinDate: "2024-06-10", rating: 4.2 },
-    { id: "T-005", name: "Meena Gupta", email: "meena@tuitionflow.edu", phone: "+91 98765 00005", subject: "English", qualification: "M.A English", payType: "monthly" as const, payAmount: "35000", status: "Active" as const, assignedBatches: ["batch-alpha", "batch-gamma"], joinDate: "2023-11-05", rating: 4.9 },
+    { id: "T-001", name: "Dr. Priya Sharma", email: "priya@coachingos.edu", phone: "+91 98765 00001", subject: "Mathematics", qualification: "Ph.D Mathematics", payType: "monthly" as const, payAmount: "45000", status: "Active" as const, assignedBatches: ["batch-alpha"], joinDate: "2024-01-15", rating: 4.8 },
+    { id: "T-002", name: "Rajesh Kumar", email: "rajesh@coachingos.edu", phone: "+91 98765 00002", subject: "Physics", qualification: "M.Sc Physics", payType: "batchwise" as const, payAmount: "12000", status: "Active" as const, assignedBatches: ["batch-beta"], joinDate: "2024-03-01", rating: 4.5 },
+    { id: "T-003", name: "Anita Desai", email: "anita@coachingos.edu", phone: "+91 98765 00003", subject: "Chemistry", qualification: "M.Sc Chemistry", payType: "monthly" as const, payAmount: "40000", status: "On Leave" as const, assignedBatches: ["batch-gamma"], joinDate: "2023-08-20", rating: 4.7 },
+    { id: "T-004", name: "Suresh Patel", email: "suresh@coachingos.edu", phone: "+91 98765 00004", subject: "Biology", qualification: "M.Sc Biology", payType: "daily" as const, payAmount: "2500", status: "Active" as const, assignedBatches: ["batch-delta", "batch-beta"], joinDate: "2024-06-10", rating: 4.2 },
+    { id: "T-005", name: "Meena Gupta", email: "meena@coachingos.edu", phone: "+91 98765 00005", subject: "English", qualification: "M.A English", payType: "monthly" as const, payAmount: "35000", status: "Active" as const, assignedBatches: ["batch-alpha", "batch-gamma"], joinDate: "2023-11-05", rating: 4.9 },
   ]
 
   if (tenantId === "inst_002") {
@@ -383,7 +402,7 @@ export const mockTeachersGenerator = (tenantId: string): Teacher[] => {
       payType: t.payType as "monthly" | "batchwise" | "daily",
       status: t.status as "Active" | "On Leave" | "Inactive",
       name: t.name.replace("Sharma", "Apex").replace("Kumar", "Apex").replace("Desai", "Apex").replace("Patel", "Apex").replace("Gupta", "Apex"),
-      email: t.email.replace("tuitionflow.edu", "apexscience.edu")
+      email: t.email.replace("coachingos.edu", "apexscience.edu")
     }))
   }
 
@@ -393,7 +412,7 @@ export const mockTeachersGenerator = (tenantId: string): Teacher[] => {
       payType: t.payType as "monthly" | "batchwise" | "daily",
       status: t.status as "Active" | "On Leave" | "Inactive",
       name: t.name.replace("Sharma", "Horizon").replace("Kumar", "Horizon").replace("Desai", "Horizon").replace("Patel", "Horizon").replace("Gupta", "Horizon"),
-      email: t.email.replace("tuitionflow.edu", "horizonprep.edu")
+      email: t.email.replace("coachingos.edu", "horizonprep.edu")
     }))
   }
 
@@ -534,17 +553,17 @@ export const mockQrsGenerator = (tenantId: string): QRCodeConfig[] => {
   const suffix = tenantId === "inst_001" ? "fees@okaxis" : tenantId === "inst_002" ? "fees@okicici" : "fees@okhdfc"
   const bankName = tenantId === "inst_001" ? "Axis Bank" : tenantId === "inst_002" ? "ICICI Bank" : "HDFC Bank"
   return [
-    { id: "QR-001", label: "Primary Admission QR", upiId: `tuitionflow.${suffix}`, bankName, status: "Active" as const },
-    { id: "QR-002", label: "Secondary Bank QR", upiId: `tuitionflow2.${suffix}`, bankName, status: "Active" as const }
+    { id: "QR-001", label: "Primary Admission QR", upiId: `coachingos.${suffix}`, bankName, status: "Active" as const },
+    { id: "QR-002", label: "Secondary Bank QR", upiId: `coachingos2.${suffix}`, bankName, status: "Active" as const }
   ]
 }
 
 export const mockOnlineTransactionsGenerator = (tenantId: string): OnlineTransaction[] => {
   const suffix = tenantId === "inst_001" ? "fees@okaxis" : tenantId === "inst_002" ? "fees@okicici" : "fees@okhdfc"
   const base = [
-    { id: "TXN-ON-5001", studentName: "Sarah Smith", batch: "Batch Alpha", amount: "500", month: "June 2026", upiIdUsed: `tuitionflow.${suffix}`, status: "Success" as const, timestamp: "2026-06-18 10:15" },
-    { id: "TXN-ON-5002", studentName: "Alex Brown", batch: "Batch Beta", amount: "500", month: "June 2026", upiIdUsed: `tuitionflow.${suffix}`, status: "Pending" as const, timestamp: "2026-06-18 11:30" },
-    { id: "TXN-ON-5003", studentName: "Emma Watson", batch: "Batch Alpha", amount: "500", month: "June 2026", upiIdUsed: `tuitionflow2.${suffix}`, status: "Success" as const, timestamp: "2026-06-17 14:02" },
+    { id: "TXN-ON-5001", studentName: "Sarah Smith", batch: "Batch Alpha", amount: "500", month: "June 2026", upiIdUsed: `coachingos.${suffix}`, status: "Success" as const, timestamp: "2026-06-18 10:15" },
+    { id: "TXN-ON-5002", studentName: "Alex Brown", batch: "Batch Beta", amount: "500", month: "June 2026", upiIdUsed: `coachingos.${suffix}`, status: "Pending" as const, timestamp: "2026-06-18 11:30" },
+    { id: "TXN-ON-5003", studentName: "Emma Watson", batch: "Batch Alpha", amount: "500", month: "June 2026", upiIdUsed: `coachingos2.${suffix}`, status: "Success" as const, timestamp: "2026-06-17 14:02" },
   ]
 
   if (tenantId === "inst_002") {

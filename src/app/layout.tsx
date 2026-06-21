@@ -3,8 +3,30 @@ import './globals.css';
 import RootLayoutWrapper from '@/components/root-layout-wrapper';
 
 export const metadata: Metadata = {
-  title: 'TuitionFlow | Professional Education Management',
-  description: 'Integrated platform for student analytics, attendance, fees, and more.',
+  title: 'Coaching OS | Professional Education Management Platform',
+  description: 'Manage students, attendance, fees, batches, parent communication, and teacher payroll from one unified platform. Reclaim administrative time and stop revenue leakage with Coaching OS.',
+  icons: {
+    icon: '/logo.png',
+  },
+  openGraph: {
+    title: 'Coaching OS | Professional Education Management Platform',
+    description: 'Manage students, attendance, fees, batches, parent communication, and teacher payroll from one unified platform.',
+    images: [
+      {
+        url: '/logo.png',
+        width: 512,
+        height: 512,
+        alt: 'Coaching OS logo',
+      }
+    ],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Coaching OS | Professional Education Management Platform',
+    description: 'Manage students, attendance, fees, batches, parent communication, and teacher payroll from one unified platform.',
+    images: ['/logo.png'],
+  },
 };
 
 export default function RootLayout({

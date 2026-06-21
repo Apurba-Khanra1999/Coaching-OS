@@ -66,6 +66,7 @@ import {
   TENANTS,
   ROLES
 } from "@/lib/tenant"
+import SaasLandingPage from "@/components/saas-landing-page"
 
 // --- Performance Chart Data ---
 const performanceData = [
@@ -100,10 +101,13 @@ export default function DashboardPage() {
   const [greeting, setGreeting] = React.useState("Welcome Back")
   const [activeRole, setActiveRole] = React.useState<string>("owner")
   const [activeTenant, setActiveTenant] = React.useState<string>("inst_001")
+  const [isLoggedIn, setIsLoggedIn] = React.useState<boolean>(false)
   const [mounted, setMounted] = React.useState(false)
   const [chartTab, setChartTab] = React.useState<"students" | "revenue" | "attendance">("students")
 
   React.useEffect(() => {
+    const loggedIn = localStorage.getItem("tuitionflow_logged_in") === "true"
+    setIsLoggedIn(loggedIn)
     setActiveRole(getActiveRole())
     setActiveTenant(getActiveTenant())
     setMounted(true)
@@ -123,6 +127,10 @@ export default function DashboardPage() {
         </div>
       </div>
     )
+  }
+
+  if (!isLoggedIn) {
+    return <SaasLandingPage />
   }
 
   // Route to the appropriate dashboard component
@@ -156,7 +164,7 @@ function SuperAdminDashboard({ greeting }: { greeting: string }) {
   const platformRevenue = institutesCount * 15000 // SaaS subscription monthly
 
   const systemLogs = [
-    { id: 1, type: "billing", message: "Auto-billing processed successfully for TuitionFlow Academy", time: "1 hour ago", category: "success" },
+    { id: 1, type: "billing", message: "Auto-billing processed successfully for Coaching OS Academy", time: "1 hour ago", category: "success" },
     { id: 2, type: "settings", message: "Domain Mapping modified for Apex Science Institute (inst_002)", time: "4 hours ago", category: "info" },
     { id: 3, type: "security", message: "Weekly full platform database backup verified", time: "12 hours ago", category: "success" },
     { id: 4, type: "tenant", message: "New Tenant Registration: Horizon Prep Academy initialized", time: "1 day ago", category: "warning" },
@@ -1139,7 +1147,7 @@ function OwnerDashboard({ greeting, activeTenant, chartTab, setChartTab }: Owner
             <CardTitle className="font-headline text-base font-bold flex items-center gap-1.5">
               <Activity className="size-4 text-primary" /> Live Activity Feed
             </CardTitle>
-            <CardDescription>Real-time events at TuitionFlow</CardDescription>
+            <CardDescription>Real-time events at Coaching OS</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <div className="px-6 space-y-4 max-h-[190px] overflow-y-auto pb-4">
