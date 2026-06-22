@@ -153,6 +153,7 @@ export function AppSidebar() {
       {
         label: "Other",
         items: [
+          { name: "Credentials Manager", icon: UserCog, href: "/credentials" },
           { name: "Communications", icon: MessageSquare, href: "/communications" },
           { name: "Notifications", icon: Bell, href: "/notifications" },
           { name: "Settings", icon: Settings, href: "/settings" },
