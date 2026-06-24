@@ -48,118 +48,13 @@ import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 
-// --- Types & Data ---
-interface Notification {
-  id: string
-  title: string
-  description: string
-  type: "fee" | "attendance" | "communication" | "system" | "student"
-  priority: "high" | "medium" | "low"
-  isRead: boolean
-  isStarred: boolean
-  isArchived: boolean
-  timestamp: string
-  relativeTime: string
-}
+import { 
+  getScopedData, 
+  setScopedData, 
+  mockNotificationsGenerator, 
+  Notification 
+} from "@/lib/tenant"
 
-const initialNotifications: Notification[] = [
-  {
-    id: "N-001",
-    title: "Fee Payment Overdue",
-    description: "Alex Brown's tuition fee for June 2026 is 15 days overdue. Total due: ₹5,000. Please follow up with the guardian.",
-    type: "fee",
-    priority: "high",
-    isRead: false,
-    isStarred: false,
-    isArchived: false,
-    timestamp: "2026-06-17T10:30:00",
-    relativeTime: "2 hours ago",
-  },
-  {
-    id: "N-002",
-    title: "Attendance Below Threshold",
-    description: "Sophie Turner's attendance in Batch Gamma has dropped below 75% this month. Consider sending an alert to parents.",
-    type: "attendance",
-    priority: "high",
-    isRead: false,
-    isStarred: true,
-    isArchived: false,
-    timestamp: "2026-06-17T09:15:00",
-    relativeTime: "3 hours ago",
-  },
-  {
-    id: "N-003",
-    title: "WhatsApp Group Created",
-    description: "Batch Alpha WhatsApp group has been successfully created. 8 students have been added via invite link.",
-    type: "communication",
-    priority: "low",
-    isRead: false,
-    isStarred: false,
-    isArchived: false,
-    timestamp: "2026-06-17T08:00:00",
-    relativeTime: "4 hours ago",
-  },
-  {
-    id: "N-004",
-    title: "New Student Enrollment",
-    description: "Priya Sharma has been enrolled in Batch Beta (Physics). Guardian contact and fee structure have been configured.",
-    type: "student",
-    priority: "medium",
-    isRead: true,
-    isStarred: false,
-    isArchived: false,
-    timestamp: "2026-06-16T16:45:00",
-    relativeTime: "Yesterday",
-  },
-  {
-    id: "N-005",
-    title: "Bulk SMS Delivered",
-    description: "Monthly fee reminder sent to 42 parents across all batches. 40 delivered, 2 failed. Check communication logs for details.",
-    type: "communication",
-    priority: "medium",
-    isRead: true,
-    isStarred: false,
-    isArchived: false,
-    timestamp: "2026-06-16T14:20:00",
-    relativeTime: "Yesterday",
-  },
-  {
-    id: "N-006",
-    title: "System Maintenance Completed",
-    description: "Database backup and system maintenance completed successfully. All services are running normally.",
-    type: "system",
-    priority: "low",
-    isRead: true,
-    isStarred: false,
-    isArchived: false,
-    timestamp: "2026-06-16T06:00:00",
-    relativeTime: "Yesterday",
-  },
-  {
-    id: "N-007",
-    title: "5 Students Absent Today",
-    description: "Batch Alpha: 2 absent, Batch Beta: 1 absent, Batch Gamma: 2 absent. Absent students have been notified via WhatsApp.",
-    type: "attendance",
-    priority: "medium",
-    isRead: true,
-    isStarred: false,
-    isArchived: false,
-    timestamp: "2026-06-15T17:30:00",
-    relativeTime: "2 days ago",
-  },
-  {
-    id: "N-008",
-    title: "Fee Collection Target Reached",
-    description: "Congratulations! 95% of June 2026 fees have been collected. Outstanding amount: ₹12,500 from 3 students.",
-    type: "fee",
-    priority: "low",
-    isRead: true,
-    isStarred: true,
-    isArchived: false,
-    timestamp: "2026-06-15T12:00:00",
-    relativeTime: "2 days ago",
-  },
-]
 
 const notificationTypeConfig: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
   fee: { icon: CreditCard, color: "text-amber-600", bg: "bg-amber-50", label: "Finance" },
@@ -177,7 +72,7 @@ const priorityConfig: Record<string, { color: string; bg: string }> = {
 
 export default function NotificationsPage() {
   const { toast } = useToast()
-  const [notifications, setNotifications] = React.useState(initialNotifications)
+  const [notifications, setNotifications] = React.useState<Notification[]>([])
   const [searchTerm, setSearchTerm] = React.useState("")
   const [typeFilter, setTypeFilter] = React.useState("all")
   const [activeTab, setActiveTab] = React.useState("all")
@@ -191,36 +86,49 @@ export default function NotificationsPage() {
   const [attendanceAlerts, setAttendanceAlerts] = React.useState(true)
 
   React.useEffect(() => {
+    setNotifications(getScopedData<Notification[]>("notifications", mockNotificationsGenerator))
     const timer = setTimeout(() => setIsLoading(false), 500)
     return () => clearTimeout(timer)
   }, [])
 
   // Actions
   const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n))
+    const updated = notifications.map(n => n.id === id ? { ...n, isRead: true } : n)
+    setNotifications(updated)
+    setScopedData<Notification[]>("notifications", updated)
   }
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+    const updated = notifications.map(n => ({ ...n, isRead: true }))
+    setNotifications(updated)
+    setScopedData<Notification[]>("notifications", updated)
     toast({ title: "All Marked Read", description: "All notifications have been marked as read." })
   }
 
   const toggleStar = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isStarred: !n.isStarred } : n))
+    const updated = notifications.map(n => n.id === id ? { ...n, isStarred: !n.isStarred } : n)
+    setNotifications(updated)
+    setScopedData<Notification[]>("notifications", updated)
   }
 
   const archiveNotification = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isArchived: true, isRead: true } : n))
+    const updated = notifications.map(n => n.id === id ? { ...n, isArchived: true, isRead: true } : n)
+    setNotifications(updated)
+    setScopedData<Notification[]>("notifications", updated)
     toast({ title: "Archived", description: "Notification moved to archive." })
   }
 
   const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
+    const updated = notifications.filter(n => n.id !== id)
+    setNotifications(updated)
+    setScopedData<Notification[]>("notifications", updated)
     toast({ title: "Deleted", description: "Notification has been removed.", variant: "destructive" })
   }
 
   const clearAll = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isArchived: true, isRead: true })))
+    const updated = notifications.map(n => ({ ...n, isArchived: true, isRead: true }))
+    setNotifications(updated)
+    setScopedData<Notification[]>("notifications", updated)
     toast({ title: "Cleared", description: "All notifications moved to archive." })
   }
 

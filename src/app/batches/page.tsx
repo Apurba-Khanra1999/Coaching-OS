@@ -67,7 +67,7 @@ import * as z from "zod"
 import { useToast } from "@/hooks/use-toast"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { getScopedData, setScopedData, mockBatchesGenerator, getActiveRole } from "@/lib/tenant"
+import { getScopedData, setScopedData, mockBatchesGenerator, mockStudentsGenerator, getActiveRole } from "@/lib/tenant"
 
 const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -87,6 +87,24 @@ type BatchFormValues = z.infer<typeof batchSchema>
 
 interface Batch extends BatchFormValues {
   id: string;
+}
+
+interface Student {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  batch: string;
+  status: string;
+  joinedDate: string;
+  gender: string;
+  dob: string;
+  guardianName: string;
+  guardianPhone: string;
+  address: string;
+  schoolName: string;
+  studentClass: string;
+  avatarUrl?: string;
 }
 
 const initialBatches: Batch[] = [
@@ -122,6 +140,12 @@ export default function BatchesPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [editingBatch, setEditingBatch] = React.useState<Batch | null>(null)
 
+  // Manage students states
+  const [students, setStudents] = React.useState<Student[]>([])
+  const [selectedManageBatch, setSelectedManageBatch] = React.useState<Batch | null>(null)
+  const [isManageDialogOpen, setIsManageDialogOpen] = React.useState(false)
+  const [studentSearchQuery, setStudentSearchQuery] = React.useState("")
+
   // Calendar states
   const [startTime, setStartTime] = React.useState("09:00 AM")
   const [endTime, setEndTime] = React.useState("10:30 AM")
@@ -148,6 +172,8 @@ export default function BatchesPage() {
   React.useEffect(() => {
     const loadedBatches = getScopedData<Batch[]>("batches", mockBatchesGenerator)
     setBatches(loadedBatches)
+    const loadedStudents = getScopedData<Student[]>("students", mockStudentsGenerator)
+    setStudents(loadedStudents)
     setActiveRole(getActiveRole())
   }, [])
 
@@ -218,6 +244,19 @@ export default function BatchesPage() {
     let updated: Batch[] = []
     if (editingBatch) {
       updated = batches.map(b => b.id === editingBatch.id ? { ...b, ...values } : b)
+      
+      // Update student batch attributes if batch name is changed
+      if (editingBatch.name !== values.name) {
+        const updatedStudents = students.map(s => {
+          if (s.batch === editingBatch.name) {
+            return { ...s, batch: values.name }
+          }
+          return s
+        })
+        setStudents(updatedStudents)
+        setScopedData<Student[]>("students", updatedStudents)
+      }
+      
       toast({ title: "Batch Updated", description: `${values.name} modified successfully.` })
     } else {
       const newBatch: Batch = {
@@ -234,13 +273,92 @@ export default function BatchesPage() {
   }
 
   const handleDelete = (id: string) => {
+    const targetBatch = batches.find(b => b.id === id)
     const updated = batches.filter(b => b.id !== id)
     setBatches(updated)
     setScopedData<Batch[]>("batches", updated)
+
+    if (targetBatch) {
+      const updatedStudents = students.map(s => {
+        if (s.batch === targetBatch.name) {
+          return { ...s, batch: "" }
+        }
+        return s
+      })
+      setStudents(updatedStudents)
+      setScopedData<Student[]>("students", updatedStudents)
+    }
+
     toast({
       title: "Batch Removed",
       description: "Batch deleted permanently.",
       variant: "destructive"
+    })
+  }
+
+  const handleRemoveStudentFromBatch = (studentId: string) => {
+    if (!selectedManageBatch) return
+
+    const updatedStudents = students.map(s => {
+      if (s.id === studentId) {
+        return { ...s, batch: "" }
+      }
+      return s
+    })
+
+    const newCount = updatedStudents.filter(s => s.batch === selectedManageBatch.name).length
+
+    const updatedBatches = batches.map(b => {
+      if (b.id === selectedManageBatch.id) {
+        return { ...b, students: newCount }
+      }
+      return b
+    })
+
+    setStudents(updatedStudents)
+    setScopedData<Student[]>("students", updatedStudents)
+
+    setBatches(updatedBatches)
+    setScopedData<Batch[]>("batches", updatedBatches)
+
+    setSelectedManageBatch(prev => prev ? { ...prev, students: newCount } : null)
+
+    toast({
+      title: "Student Removed",
+      description: "Student unassigned from batch successfully."
+    })
+  }
+
+  const handleAddStudentToBatch = (studentId: string) => {
+    if (!selectedManageBatch) return
+
+    const updatedStudents = students.map(s => {
+      if (s.id === studentId) {
+        return { ...s, batch: selectedManageBatch.name }
+      }
+      return s
+    })
+
+    const newCount = updatedStudents.filter(s => s.batch === selectedManageBatch.name).length
+
+    const updatedBatches = batches.map(b => {
+      if (b.id === selectedManageBatch.id) {
+        return { ...b, students: newCount }
+      }
+      return b
+    })
+
+    setStudents(updatedStudents)
+    setScopedData<Student[]>("students", updatedStudents)
+
+    setBatches(updatedBatches)
+    setScopedData<Batch[]>("batches", updatedBatches)
+
+    setSelectedManageBatch(prev => prev ? { ...prev, students: newCount } : null)
+
+    toast({
+      title: "Student Added",
+      description: "Student assigned to batch successfully."
     })
   }
 
@@ -663,7 +781,16 @@ export default function BatchesPage() {
               </CardContent>
               <CardFooter className="bg-muted/5 p-3 flex items-center justify-between border-t border-border/10">
                 <span className="text-[10px] text-muted-foreground uppercase">UID: {batch.id.toUpperCase()}</span>
-                <Button variant="link" size="sm" className="h-auto p-0 text-xs font-bold flex items-center gap-1">
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="h-auto p-0 text-xs font-bold flex items-center gap-1"
+                  onClick={() => {
+                    setSelectedManageBatch(batch)
+                    setIsManageDialogOpen(true)
+                    setStudentSearchQuery("")
+                  }}
+                >
                   MANAGE <ChevronRight className="size-3" />
                 </Button>
               </CardFooter>
@@ -671,6 +798,153 @@ export default function BatchesPage() {
           ))
         )}
       </div>
+
+      {/* Manage Students Dialog */}
+      <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] h-[80vh] p-0 flex flex-col overflow-hidden">
+          {selectedManageBatch && (
+            <div className="flex flex-col h-full overflow-hidden">
+              <DialogHeader className="p-6 pb-2 shrink-0 border-b">
+                <DialogTitle className="font-headline font-bold text-lg flex items-center gap-2">
+                  <Layers className="size-5 text-primary" /> Manage Students &mdash; {selectedManageBatch.name}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Allocate and deallocate students for this batch. Capacity: {selectedManageBatch.students} / {selectedManageBatch.capacity}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x overflow-hidden">
+                {/* Column 1: Current Enrolled Students */}
+                <div className="flex flex-col h-full min-h-0 p-5 overflow-hidden">
+                  <div className="pb-3 space-y-1 shrink-0">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Currently Enrolled ({selectedManageBatch.students})</h4>
+                    <p className="text-[10px] text-muted-foreground">Students enrolled in this batch.</p>
+                  </div>
+                  
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1">
+                    {students.filter(s => s.batch === selectedManageBatch.name).length === 0 ? (
+                      <div className="h-32 flex flex-col items-center justify-center text-muted-foreground border border-dashed rounded-xl">
+                        <User className="size-8 opacity-20 mb-1" />
+                        <p className="text-[10px]">No students enrolled.</p>
+                      </div>
+                    ) : (
+                      students.filter(s => s.batch === selectedManageBatch.name).map(student => (
+                        <div key={student.id} className="flex items-center justify-between p-2.5 rounded-xl border bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center gap-2 overflow-hidden mr-2">
+                            <span className="size-7 rounded-full bg-indigo-50 border border-indigo-150 flex items-center justify-center font-bold text-indigo-700 text-xs shrink-0 select-none">
+                              {student.name.charAt(0)}
+                            </span>
+                            <div className="flex flex-col overflow-hidden text-left">
+                              <span className="text-xs font-bold text-slate-800 truncate">{student.name}</span>
+                              <span className="text-[9px] text-muted-foreground truncate">{student.email}</span>
+                            </div>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-[10px] font-bold rounded-lg border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 shrink-0"
+                            onClick={() => handleRemoveStudentFromBatch(student.id)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Column 2: Available Students (Not in Batch) */}
+                <div className="flex flex-col h-full min-h-0 p-5 overflow-hidden">
+                  <div className="pb-3 space-y-2 shrink-0">
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Add Students</h4>
+                      <p className="text-[10px] text-muted-foreground">Assign available students from the directory.</p>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Search students..."
+                        className="pl-8 h-8 text-xs bg-white rounded-lg"
+                        value={studentSearchQuery}
+                        onChange={(e) => setStudentSearchQuery(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1">
+                    {(() => {
+                      const availableList = students.filter(s => {
+                        const isNotCurrent = s.batch !== selectedManageBatch.name
+                        const matchesQuery = s.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
+                                            s.email.toLowerCase().includes(studentSearchQuery.toLowerCase())
+                        return isNotCurrent && matchesQuery
+                      })
+
+                      if (availableList.length === 0) {
+                        return (
+                          <div className="h-32 flex flex-col items-center justify-center text-muted-foreground border border-dashed rounded-xl">
+                            <Search className="size-8 opacity-20 mb-1" />
+                            <p className="text-[10px]">No available students found.</p>
+                          </div>
+                        )
+                      }
+
+                      return availableList.map(student => (
+                        <div key={student.id} className="flex items-center justify-between p-2.5 rounded-xl border bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center gap-2 overflow-hidden mr-2">
+                            <span className="size-7 rounded-full bg-slate-100 border flex items-center justify-center font-bold text-slate-650 text-xs shrink-0 select-none">
+                              {student.name.charAt(0)}
+                            </span>
+                            <div className="flex flex-col overflow-hidden text-left">
+                              <span className="text-xs font-bold text-slate-800 truncate">{student.name}</span>
+                              <div className="flex items-center gap-1.5 truncate">
+                                {student.batch ? (
+                                  <span className="text-[8px] bg-amber-50 text-amber-700 px-1 py-0.2 rounded border border-amber-100 truncate shrink-0 max-w-[80px]">
+                                    {student.batch}
+                                  </span>
+                                ) : (
+                                  <span className="text-[8px] bg-slate-100 text-slate-500 px-1 py-0.2 rounded border truncate shrink-0">
+                                    Unassigned
+                                  </span>
+                                )}
+                                <span className="text-[9px] text-muted-foreground truncate">{student.email}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-[10px] font-bold rounded-lg border-indigo-100 text-indigo-650 hover:bg-indigo-50 hover:border-indigo-200 shrink-0"
+                            onClick={() => handleAddStudentToBatch(student.id)}
+                            disabled={selectedManageBatch.students >= selectedManageBatch.capacity}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="p-4 shrink-0 border-t bg-slate-50 flex items-center justify-between">
+                <div className="text-[10px] font-medium text-slate-500">
+                  {selectedManageBatch.students >= selectedManageBatch.capacity ? (
+                    <span className="text-red-500 font-bold flex items-center gap-1">
+                      <AlertCircle className="size-3" /> Batch is full (Capacity reached)
+                    </span>
+                  ) : (
+                    <span>Slots remaining: {selectedManageBatch.capacity - selectedManageBatch.students} slots</span>
+                  )}
+                </div>
+                <Button type="button" size="sm" className="rounded-xl text-xs h-8 px-4 font-bold" onClick={() => setIsManageDialogOpen(false)}>
+                  Close Manager
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

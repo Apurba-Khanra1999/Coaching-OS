@@ -17,6 +17,7 @@ import {
   Receipt,
   UserCog,
   QrCode,
+  Package,
   LogOut
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -154,6 +155,7 @@ export function AppSidebar() {
         label: "Other",
         items: [
           { name: "Credentials Manager", icon: UserCog, href: "/credentials" },
+          { name: "Asset Management", icon: Package, href: "/assets" },
           { name: "Communications", icon: MessageSquare, href: "/communications" },
           { name: "Notifications", icon: Bell, href: "/notifications" },
           { name: "Settings", icon: Settings, href: "/settings" },

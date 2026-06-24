@@ -42,6 +42,18 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import { 
+  getScopedData, 
+  setScopedData, 
+  mockNotificationsGenerator, 
+  mockStudentsGenerator,
+  mockBatchesGenerator,
+  Notification,
+  Student,
+  Batch,
+  getActiveRole,
+  getActiveTenant
+} from "@/lib/tenant"
 import {
   Dialog,
   DialogContent,
@@ -73,22 +85,8 @@ interface WhatsAppGroup {
   isActive: boolean
 }
 
-const batchList = [
-  { id: "batch-alpha", name: "Batch Alpha — Math", color: "bg-indigo-500", studentCount: 12 },
-  { id: "batch-beta", name: "Batch Beta — Physics", color: "bg-emerald-500", studentCount: 10 },
-  { id: "batch-gamma", name: "Batch Gamma — Chemistry", color: "bg-amber-500", studentCount: 8 },
-]
-
-const studentList = [
-  { id: 1, name: "Sarah Smith", batch: "batch-alpha", phone: "+91 98765 43210" },
-  { id: 2, name: "Alex Brown", batch: "batch-alpha", phone: "+91 98765 43211" },
-  { id: 3, name: "Emma Watson", batch: "batch-alpha", phone: "+91 98765 43212" },
-  { id: 4, name: "James Wilson", batch: "batch-beta", phone: "+91 98765 43213" },
-  { id: 5, name: "Olivia Davis", batch: "batch-beta", phone: "+91 98765 43214" },
-  { id: 6, name: "Daniel Craig", batch: "batch-gamma", phone: "+91 98765 43215" },
-  { id: 7, name: "Sophie Turner", batch: "batch-gamma", phone: "+91 98765 43216" },
-  { id: 8, name: "Liam Johnson", batch: "batch-alpha", phone: "+91 98765 43217" },
-]
+// Batch/student color palette for visual distinction
+const batchColors = ["bg-indigo-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500", "bg-violet-500"]
 
 const initialTemplates = [
   { id: 1, name: "Attendance Alert", category: "Daily", content: "Dear Parent, [Student Name] was absent from the [Batch Name] session today. Please contact us for details." },
@@ -111,6 +109,12 @@ type AudienceType = "batchwise" | "individual"
 export default function CommunicationsPage() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = React.useState(true)
+  const [activeRole, setActiveRole] = React.useState("")
+  const [activeTenantId, setActiveTenantId] = React.useState("")
+
+  // Live scoped data — always in sync with the rest of the application
+  const [studentList, setStudentList] = React.useState<Student[]>([])
+  const [batchList, setBatchList] = React.useState<(Batch & { color: string })[]>([])
 
   // Compose state
   const [message, setMessage] = React.useState("")
@@ -120,7 +124,7 @@ export default function CommunicationsPage() {
     App: true,
   })
   const [audienceType, setAudienceType] = React.useState<AudienceType>("batchwise")
-  const [selectedBatch, setSelectedBatch] = React.useState("batch-alpha")
+  const [selectedBatch, setSelectedBatch] = React.useState("")
   const [selectedStudent, setSelectedStudent] = React.useState("")
   const [isSending, setIsSending] = React.useState(false)
 
@@ -131,17 +135,54 @@ export default function CommunicationsPage() {
   // Log state
   const [logSearch, setLogSearch] = React.useState("")
   const [logChannelFilter, setLogChannelFilter] = React.useState("all")
+  const [logs, setLogs] = React.useState<any[]>([])
 
   // WhatsApp Groups state
-  const [whatsappGroups, setWhatsappGroups] = React.useState<WhatsAppGroup[]>([
-    { batchId: "batch-alpha", batchName: "Batch Alpha — Math", groupLink: "https://chat.whatsapp.com/abc123xyz", membersCount: 12, isActive: true },
-    { batchId: "batch-beta", batchName: "Batch Beta — Physics", groupLink: "", membersCount: 0, isActive: false },
-    { batchId: "batch-gamma", batchName: "Batch Gamma — Chemistry", groupLink: "https://chat.whatsapp.com/def456uvw", membersCount: 8, isActive: true },
-  ])
+  const [whatsappGroups, setWhatsappGroups] = React.useState<WhatsAppGroup[]>([])
   const [editingGroupId, setEditingGroupId] = React.useState<string | null>(null)
   const [editGroupLink, setEditGroupLink] = React.useState("")
 
   React.useEffect(() => {
+    setActiveRole(getActiveRole())
+    setActiveTenantId(getActiveTenant())
+    setLogs(getScopedData<any[]>("communication_logs", () => initialLogs))
+
+    // Load live students from scoped data — this reflects profile edits made anywhere
+    const liveStudents = getScopedData<Student[]>("students", mockStudentsGenerator)
+    setStudentList(liveStudents)
+
+    // Load live batches from scoped data
+    const liveBatches = getScopedData<Batch[]>("batches", mockBatchesGenerator)
+    const batchesWithColor = liveBatches.map((b, i) => ({
+      ...b,
+      color: batchColors[i % batchColors.length],
+    }))
+    setBatchList(batchesWithColor)
+
+    // Set default selected batch
+    if (liveBatches.length > 0) {
+      setSelectedBatch(liveBatches[0].id)
+    }
+
+    // Load or initialize WhatsApp groups from scoped data
+    const savedGroups = getScopedData<WhatsAppGroup[]>("whatsapp_groups", () => {
+      return liveBatches.map(b => ({
+        batchId: b.id,
+        batchName: b.name,
+        groupLink: "",
+        membersCount: 0,
+        isActive: false,
+      }))
+    })
+    // Ensure all current batches have a group entry
+    const groupMap = new Map(savedGroups.map(g => [g.batchId, g]))
+    const mergedGroups = liveBatches.map(b => {
+      const existing = groupMap.get(b.id)
+      if (existing) return { ...existing, batchName: b.name }
+      return { batchId: b.id, batchName: b.name, groupLink: "", membersCount: 0, isActive: false }
+    })
+    setWhatsappGroups(mergedGroups)
+
     const timer = setTimeout(() => setIsLoading(false), 500)
     return () => clearTimeout(timer)
   }, [])
@@ -158,6 +199,40 @@ export default function CommunicationsPage() {
     setChannels(prev => ({ ...prev, [ch]: !prev[ch] }))
   }
 
+  // Helper to resolve placeholders for practical daily use
+  // Uses live studentList and batchList from state (loaded from scoped data)
+  const resolvePlaceholders = (text: string, audience: AudienceType, batchId: string, studentId: string) => {
+    let resolved = text
+    
+    // Resolve date and month first
+    const monthName = new Date().toLocaleString("default", { month: "long" })
+    const currentDate = new Date().toLocaleDateString()
+    
+    resolved = resolved.replace(/\[Month\]/g, monthName)
+    resolved = resolved.replace(/\[Date\]/g, currentDate)
+    resolved = resolved.replace(/\[Occasion\]/g, "Holiday")
+    resolved = resolved.replace(/\[Resume Date\]/g, "next Monday")
+
+    if (audience === "individual") {
+      const student = studentList.find(s => s.id === studentId)
+      if (student) {
+        resolved = resolved.replace(/\[Student Name\]/g, student.name)
+        // Match batch by id or by name (students store batch as name string)
+        const batch = batchList.find(b => b.id === student.batch || b.name === student.batch)
+        if (batch) {
+          resolved = resolved.replace(/\[Batch Name\]/g, batch.name)
+        }
+      }
+    } else {
+      const batch = batchList.find(b => b.id === batchId)
+      if (batch) {
+        resolved = resolved.replace(/\[Batch Name\]/g, batch.name)
+      }
+      resolved = resolved.replace(/\[Student Name\]/g, "your ward")
+    }
+    return resolved
+  }
+
   const handleSend = () => {
     if (!message.trim()) {
       toast({
@@ -168,7 +243,7 @@ export default function CommunicationsPage() {
       return
     }
 
-    const activeChannels = Object.entries(channels).filter(([, v]) => v).map(([k]) => k)
+    const activeChannels = Object.entries(channels).filter(([, v]) => v).map(([k]) => k) as ChannelType[]
     if (activeChannels.length === 0) {
       toast({
         variant: "destructive",
@@ -188,18 +263,91 @@ export default function CommunicationsPage() {
     }
 
     setIsSending(true)
-    setTimeout(() => {
-      setIsSending(false)
-      const target = audienceType === "batchwise"
-        ? batchList.find(b => b.id === selectedBatch)?.name || selectedBatch
-        : studentList.find(s => String(s.id) === selectedStudent)?.name || "Student"
 
-      toast({
-        title: "Message Dispatched ✓",
-        description: `Sent to ${target} via ${activeChannels.join(", ")}.`,
-      })
-      setMessage("")
-    }, 1500)
+    // Re-fetch latest student data at send time to guarantee freshest phone numbers
+    const freshStudents = getScopedData<Student[]>("students", mockStudentsGenerator)
+    
+    // Resolve placeholders in message body
+    const resolvedMessage = resolvePlaceholders(message, audienceType, selectedBatch, selectedStudent)
+
+    // Find recipient target label
+    const target = audienceType === "batchwise"
+      ? batchList.find(b => b.id === selectedBatch)?.name || selectedBatch
+      : freshStudents.find(s => s.id === selectedStudent)?.name || "Student"
+
+    // 1. Process APP NOTIFICATION Dispatch
+    if (channels.App) {
+      const currentNotifs = getScopedData<Notification[]>("notifications", mockNotificationsGenerator)
+      const newNotif: Notification = {
+        id: `N-${Math.floor(100000 + Math.random() * 900000)}`,
+        title: audienceType === "batchwise" ? `Announcement: ${target}` : `Alert: ${target}`,
+        description: resolvedMessage,
+        type: "communication",
+        priority: "medium",
+        isRead: false,
+        isStarred: false,
+        isArchived: false,
+        timestamp: new Date().toISOString(),
+        relativeTime: "Just now"
+      }
+      const updatedNotifs = [newNotif, ...currentNotifs]
+      setScopedData<Notification[]>("notifications", updatedNotifs)
+    }
+
+    // 2. Process WHATSAPP REDIRECTION with prefilled resolved messages
+    let whatsappOpened = false
+    if (channels.WhatsApp) {
+      if (audienceType === "individual") {
+        // Use freshly fetched student data for the most up-to-date phone number
+        const student = freshStudents.find(s => s.id === selectedStudent)
+        if (student) {
+          // Clean phone number (strip spaces/plus/symbols), prepend 91 if needed
+          let cleanPhone = student.phone.replace(/[^0-9]/g, "")
+          // Ensure country code is present (default: India +91)
+          if (cleanPhone.length === 10) {
+            cleanPhone = "91" + cleanPhone
+          }
+          const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(resolvedMessage)}`
+          window.open(waUrl, "_blank")
+          whatsappOpened = true
+        }
+      } else {
+        // Group broadcast: check if WhatsApp group link is configured
+        const group = whatsappGroups.find(g => g.batchId === selectedBatch)
+        if (group?.isActive && group.groupLink) {
+          // Open the group link directly (message can be copied)
+          window.open(group.groupLink, "_blank")
+          whatsappOpened = true
+        } else {
+          // Fallback: Open WhatsApp web with prefilled message for manual send
+          const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(resolvedMessage)}`
+          window.open(waUrl, "_blank")
+          whatsappOpened = true
+        }
+      }
+    }
+
+    // 3. Process logs and save to scoped store
+    const currentLogs = getScopedData<any[]>("communication_logs", () => initialLogs)
+    const newLogs = activeChannels.map(ch => ({
+      id: `LOG-${Math.floor(100000 + Math.random() * 900000)}`,
+      recipient: target,
+      channel: ch,
+      message: resolvedMessage,
+      status: "Sent",
+      time: new Date().toLocaleString()
+    }))
+
+    const updatedLogs = [...newLogs, ...currentLogs]
+    setLogs(updatedLogs)
+    setScopedData<any[]>("communication_logs", updatedLogs)
+
+    setIsSending(false)
+    toast({
+      title: "Message Dispatched ✓",
+      description: `Sent to ${target} via ${activeChannels.join(", ")}.${whatsappOpened ? " WhatsApp interface opened in browser." : ""}`,
+    })
+    setMessage("")
   }
 
   const applyTemplate = (content: string) => {
@@ -211,13 +359,14 @@ export default function CommunicationsPage() {
   }
 
   const handleSaveGroupLink = (batchId: string) => {
-    setWhatsappGroups(prev =>
-      prev.map(g =>
-        g.batchId === batchId
-          ? { ...g, groupLink: editGroupLink, isActive: !!editGroupLink, membersCount: editGroupLink ? batchList.find(b => b.id === batchId)?.studentCount || 0 : 0 }
-          : g
-      )
+    const studentsInBatch = studentList.filter(s => s.batch === batchId || batchList.find(b => b.id === batchId)?.name === s.batch)
+    const updatedGroups = whatsappGroups.map(g =>
+      g.batchId === batchId
+        ? { ...g, groupLink: editGroupLink, isActive: !!editGroupLink, membersCount: editGroupLink ? studentsInBatch.length || batchList.find(b => b.id === batchId)?.studentsCount || 0 : 0 }
+        : g
     )
+    setWhatsappGroups(updatedGroups)
+    setScopedData<WhatsAppGroup[]>("whatsapp_groups", updatedGroups)
     setEditingGroupId(null)
     setEditGroupLink("")
     toast({
@@ -233,7 +382,7 @@ export default function CommunicationsPage() {
     return matchesSearch && matchesCategory
   })
 
-  const filteredLogs = initialLogs.filter(l => {
+  const filteredLogs = logs.filter(l => {
     const matchesSearch = l.message.toLowerCase().includes(logSearch.toLowerCase()) ||
       l.recipient.toLowerCase().includes(logSearch.toLowerCase())
     const matchesChannel = logChannelFilter === "all" || l.channel === logChannelFilter
@@ -348,7 +497,7 @@ export default function CommunicationsPage() {
                             <SelectItem key={b.id} value={b.id} className="text-xs font-medium">
                               <span className="flex items-center gap-2">
                                 <span className={cn("size-2 rounded-full", b.color)} />
-                                {b.name} ({b.studentCount} students)
+                                {b.name} ({b.studentsCount || b.students || 0} students)
                               </span>
                             </SelectItem>
                           ))}
@@ -360,12 +509,13 @@ export default function CommunicationsPage() {
                           <SelectValue placeholder="Select Student" />
                         </SelectTrigger>
                         <SelectContent>
-                          {studentList.map(s => (
-                            <SelectItem key={s.id} value={String(s.id)} className="text-xs font-medium">
+                          {studentList.filter(s => s.status === "Active" || s.status === "On Leave").map(s => (
+                            <SelectItem key={s.id} value={s.id} className="text-xs font-medium">
                               <span className="flex items-center gap-2">
                                 <User className="size-3 text-muted-foreground" />
                                 {s.name}
-                                <span className="text-muted-foreground">— {s.phone}</span>
+                                <span className="text-muted-foreground">— {s.phone || "No phone"}</span>
+                                <span className="text-muted-foreground/50 text-[9px]">({s.batch})</span>
                               </span>
                             </SelectItem>
                           ))}
@@ -410,14 +560,17 @@ export default function CommunicationsPage() {
                       </p>
                     </div>
                   )}
-                  {audienceType === "individual" && channels.WhatsApp && selectedStudent && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                      <WhatsAppIcon className="size-3.5 text-emerald-600 shrink-0" />
-                      <p className="text-[10px] text-emerald-700 font-medium">
-                        WhatsApp message will be sent personally to <span className="font-bold">{studentList.find(s => String(s.id) === selectedStudent)?.name}</span> at {studentList.find(s => String(s.id) === selectedStudent)?.phone}
-                      </p>
-                    </div>
-                  )}
+                  {audienceType === "individual" && channels.WhatsApp && selectedStudent && (() => {
+                    const student = studentList.find(s => s.id === selectedStudent)
+                    return student ? (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                        <WhatsAppIcon className="size-3.5 text-emerald-600 shrink-0" />
+                        <p className="text-[10px] text-emerald-700 font-medium">
+                          WhatsApp message will be sent personally to <span className="font-bold">{student.name}</span> at <span className="font-bold">{student.phone || "No phone configured"}</span>
+                        </p>
+                      </div>
+                    ) : null
+                  })()}
                 </div>
 
                 {/* Message Content */}

@@ -680,3 +680,292 @@ export const mockAttendanceGenerator = (tenantId: string) => {
     "2026-06-14": { "1": "Present", "2": "Present", "3": "Absent", "4": "Present", "5": "Present" },
   }
 }
+
+export interface Asset {
+  id: string
+  name: string
+  category: "Electronics" | "Furniture" | "Stationery" | "Accessories" | "Others"
+  quantity: number
+  status: "Available" | "In Use" | "In Repair" | "Deprecated"
+  purchaseDate: string
+  value: number
+  location: string
+  notes?: string
+  // New Granular quantities
+  quantityAvailable?: number
+  quantityInUse?: number
+  quantityInRepair?: number
+  quantityDeprecated?: number
+}
+
+export const mockAssetsGenerator = (tenantId: string): Asset[] => {
+  const base: Asset[] = [
+    { 
+      id: "AST-001", 
+      name: "Interactive Whiteboard", 
+      category: "Electronics", 
+      quantity: 3, 
+      status: "In Use", 
+      purchaseDate: "2025-10-12", 
+      value: 45000, 
+      location: "Classroom A", 
+      notes: "85-inch multi-touch display",
+      quantityAvailable: 1,
+      quantityInUse: 2,
+      quantityInRepair: 0,
+      quantityDeprecated: 0
+    },
+    { 
+      id: "AST-002", 
+      name: "Executive Office Chairs", 
+      category: "Furniture", 
+      quantity: 8, 
+      status: "Available", 
+      purchaseDate: "2025-05-18", 
+      value: 4800, 
+      location: "Staff Lounge", 
+      notes: "Ergonomic mesh back chairs",
+      quantityAvailable: 2,
+      quantityInUse: 6,
+      quantityInRepair: 0,
+      quantityDeprecated: 0
+    },
+    { 
+      id: "AST-003", 
+      name: "Epson Multimedia Projector", 
+      category: "Electronics", 
+      quantity: 2, 
+      status: "Available", 
+      purchaseDate: "2025-09-05", 
+      value: 35000, 
+      location: "Classroom B", 
+      notes: "Full HD laser projector",
+      quantityAvailable: 0,
+      quantityInUse: 1,
+      quantityInRepair: 1,
+      quantityDeprecated: 0
+    },
+    { 
+      id: "AST-004", 
+      name: "Dry Erase Markers (Box of 50)", 
+      category: "Stationery", 
+      quantity: 15, 
+      status: "Available", 
+      purchaseDate: "2026-06-01", 
+      value: 1200, 
+      location: "Storage Room", 
+      notes: "Assorted colors: Black, Blue, Red",
+      quantityAvailable: 10,
+      quantityInUse: 5,
+      quantityInRepair: 0,
+      quantityDeprecated: 0
+    },
+    { 
+      id: "AST-005", 
+      name: "Whiteboard Dusters", 
+      category: "Stationery", 
+      quantity: 12, 
+      status: "In Use", 
+      purchaseDate: "2026-01-20", 
+      value: 150, 
+      location: "Classrooms", 
+      notes: "Magnetic felt board cleaners",
+      quantityAvailable: 4,
+      quantityInUse: 8,
+      quantityInRepair: 0,
+      quantityDeprecated: 0
+    },
+    { 
+      id: "AST-006", 
+      name: "Dual-Band Wi-Fi Routers", 
+      category: "Accessories", 
+      quantity: 4, 
+      status: "In Use", 
+      purchaseDate: "2025-11-15", 
+      value: 6500, 
+      location: "Corridors", 
+      notes: "TP-Link mesh router nodes",
+      quantityAvailable: 0,
+      quantityInUse: 3,
+      quantityInRepair: 0,
+      quantityDeprecated: 1
+    },
+  ]
+  return base
+}
+
+export interface AssetLog {
+  id: string
+  assetId: string
+  assetName: string
+  action: "Create" | "Update" | "Delete" | "Allocate" | "Maintenance" | "Decommission"
+  description: string
+  timestamp: string // ISO string
+  operator: string  // e.g. "Owner"
+}
+
+export const mockAssetLogsGenerator = (tenantId: string): AssetLog[] => {
+  return [
+    {
+      id: "LOG-101",
+      assetId: "AST-001",
+      assetName: "Interactive Whiteboard",
+      action: "Create",
+      description: "Initial registry creation of Interactive Whiteboards (3 units) by campus administrator.",
+      timestamp: "2025-10-12T10:30:00Z",
+      operator: "Owner"
+    },
+    {
+      id: "LOG-102",
+      assetId: "AST-001",
+      assetName: "Interactive Whiteboard",
+      action: "Allocate",
+      description: "Allocated 2 whiteboards to Classroom A and Classroom C. 1 unit remains in storage.",
+      timestamp: "2025-10-13T14:15:00Z",
+      operator: "Owner"
+    },
+    {
+      id: "LOG-103",
+      assetId: "AST-003",
+      assetName: "Epson Multimedia Projector",
+      action: "Maintenance",
+      description: "Moved 1 projector unit to 'In Repair' due to bulb flicker issues reported in Classroom B.",
+      timestamp: "2026-06-18T09:00:00Z",
+      operator: "Owner"
+    },
+    {
+      id: "LOG-104",
+      assetId: "AST-004",
+      assetName: "Dry Erase Markers (Box of 50)",
+      action: "Allocate",
+      description: "Distributed 5 boxes of dry erase markers to the main faculty offices for the upcoming summer semester.",
+      timestamp: "2026-06-20T11:45:00Z",
+      operator: "Owner"
+    },
+    {
+      id: "LOG-105",
+      assetId: "AST-006",
+      assetName: "Dual-Band Wi-Fi Routers",
+      action: "Decommission",
+      description: "Decommissioned and marked 1 router node as Deprecated due to hardware failure from lightning surge.",
+      timestamp: "2026-06-22T16:20:00Z",
+      operator: "Owner"
+    }
+  ]
+}
+
+export interface Notification {
+  id: string
+  title: string
+  description: string
+  type: "fee" | "attendance" | "communication" | "system" | "student"
+  priority: "high" | "medium" | "low"
+  isRead: boolean
+  isStarred: boolean
+  isArchived: boolean
+  timestamp: string
+  relativeTime: string
+}
+
+export const mockNotificationsGenerator = (tenantId: string): Notification[] => {
+  return [
+    {
+      id: "N-001",
+      title: "Fee Payment Overdue",
+      description: "Alex Brown's tuition fee for June 2026 is 15 days overdue. Total due: ₹5,000. Please follow up with the guardian.",
+      type: "fee",
+      priority: "high",
+      isRead: false,
+      isStarred: false,
+      isArchived: false,
+      timestamp: "2026-06-17T10:30:00Z",
+      relativeTime: "2 hours ago",
+    },
+    {
+      id: "N-002",
+      title: "Attendance Below Threshold",
+      description: "Sophie Turner's attendance in Batch Gamma has dropped below 75% this month. Consider sending an alert to parents.",
+      type: "attendance",
+      priority: "high",
+      isRead: false,
+      isStarred: true,
+      isArchived: false,
+      timestamp: "2026-06-17T09:15:00Z",
+      relativeTime: "3 hours ago",
+    },
+    {
+      id: "N-003",
+      title: "WhatsApp Group Created",
+      description: "Batch Alpha WhatsApp group has been successfully created. 8 students have been added via invite link.",
+      type: "communication",
+      priority: "low",
+      isRead: false,
+      isStarred: false,
+      isArchived: false,
+      timestamp: "2026-06-17T08:00:00Z",
+      relativeTime: "4 hours ago",
+    },
+    {
+      id: "N-004",
+      title: "New Student Enrollment",
+      description: "Priya Sharma has been enrolled in Batch Beta (Physics). Guardian contact and fee structure have been configured.",
+      type: "student",
+      priority: "medium",
+      isRead: true,
+      isStarred: false,
+      isArchived: false,
+      timestamp: "2026-06-16T16:45:00Z",
+      relativeTime: "Yesterday",
+    },
+    {
+      id: "N-005",
+      title: "Bulk SMS Delivered",
+      description: "Monthly fee reminder sent to 42 parents across all batches. 40 delivered, 2 failed. Check communication logs for details.",
+      type: "communication",
+      priority: "medium",
+      isRead: true,
+      isStarred: false,
+      isArchived: false,
+      timestamp: "2026-06-16T14:20:00Z",
+      relativeTime: "Yesterday",
+    },
+    {
+      id: "N-006",
+      title: "System Maintenance Completed",
+      description: "Database backup and system maintenance completed successfully. All services are running normally.",
+      type: "system",
+      priority: "low",
+      isRead: true,
+      isStarred: false,
+      isArchived: false,
+      timestamp: "2026-06-16T06:00:00Z",
+      relativeTime: "Yesterday",
+    },
+    {
+      id: "N-007",
+      title: "5 Students Absent Today",
+      description: "Batch Alpha: 2 absent, Batch Beta: 1 absent, Batch Gamma: 2 absent. Absent students have been notified via WhatsApp.",
+      type: "attendance",
+      priority: "medium",
+      isRead: true,
+      isStarred: false,
+      isArchived: false,
+      timestamp: "2026-06-15T17:30:00Z",
+      relativeTime: "2 days ago",
+    },
+    {
+      id: "N-008",
+      title: "Fee Collection Target Reached",
+      description: "Congratulations! 95% of June 2026 fees have been collected. Outstanding amount: ₹12,500 from 3 students.",
+      type: "fee",
+      priority: "low",
+      isRead: true,
+      isStarred: true,
+      isArchived: false,
+      timestamp: "2026-06-15T12:00:00Z",
+      relativeTime: "2 days ago",
+    },
+  ]
+}
+
+
