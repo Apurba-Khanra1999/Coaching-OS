@@ -24,7 +24,8 @@ import {
   FileText,
   HelpCircle,
   Copy,
-  ChevronDown
+  ChevronDown,
+  GraduationCap
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -56,6 +57,30 @@ import {
   getUserCredentials,
   UserCredential
 } from "@/lib/tenant"
+
+interface AdmissionResponse {
+  id: string
+  examId: string
+  studentName: string
+  studentClass: string
+  studentEmail?: string
+  studentPhone?: string
+  answers: { [questionId: string]: string | string[] }
+  score: number
+  totalMarks: number
+  submittedAt: string
+  gradedStatus: "Graded" | "Pending Grading"
+  questionDetails: {
+    questionId: string
+    questionText: string
+    type: string
+    marks: number
+    studentAnswer: string | string[]
+    correctAnswer: string | string[]
+    isCorrect: boolean
+    allocatedMarks: number
+  }[]
+}
 
 // --- Searchable Student Dropdown ---
 interface StudentOption {
@@ -215,6 +240,10 @@ export default function ExamsPage() {
   const [students, setStudents] = React.useState<Student[]>([])
   const [batches, setBatches] = React.useState<Batch[]>([])
   const [activeStudent, setActiveStudent] = React.useState<Student | null>(null)
+  
+  // Admission Tests & Responses
+  const [admissionTests, setAdmissionTests] = React.useState<Exam[]>([])
+  const [admissionResponses, setAdmissionResponses] = React.useState<AdmissionResponse[]>([])
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -226,6 +255,13 @@ export default function ExamsPage() {
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false)
   const [selectedExam, setSelectedExam] = React.useState<Exam | null>(null)
   const [showAnswers, setShowAnswers] = React.useState(false)
+
+  // Admission Test Responses View States
+  const [isResponsesOpen, setIsResponsesOpen] = React.useState(false)
+  const [selectedTestForResponses, setSelectedTestForResponses] = React.useState<Exam | null>(null)
+  const [isDetailResponseOpen, setIsDetailResponseOpen] = React.useState(false)
+  const [selectedResponseDetail, setSelectedResponseDetail] = React.useState<AdmissionResponse | null>(null)
+  const [evaluationMarks, setEvaluationMarks] = React.useState<{ [qId: string]: number }>({})
 
   // Creator Form States
   const [formId, setFormId] = React.useState<string | null>(null) // null for create, string for edit
@@ -239,6 +275,7 @@ export default function ExamsPage() {
   const [formQuestions, setFormQuestions] = React.useState<Question[]>([])
   const [formScheduledDate, setFormScheduledDate] = React.useState("")
   const [formScheduledTime, setFormScheduledTime] = React.useState("")
+  const [formIsAdmissionTest, setFormIsAdmissionTest] = React.useState(false)
 
   React.useEffect(() => {
     const role = getActiveRole()
@@ -257,6 +294,12 @@ export default function ExamsPage() {
     if (loadedBatches.length > 0) {
       setFormTargetBatchId(loadedBatches[0].id)
     }
+
+    const loadedAdmissionTests = getScopedData<Exam[]>("admission_tests", () => [])
+    setAdmissionTests(loadedAdmissionTests)
+    
+    const loadedAdmissionResponses = getScopedData<AdmissionResponse[]>("admission_responses", () => [])
+    setAdmissionResponses(loadedAdmissionResponses)
     
     // Resolve logged in student/parent
     const loggedInEmail = localStorage.getItem("tuitionflow_logged_in_email") || ""
@@ -292,6 +335,18 @@ export default function ExamsPage() {
     
     setMounted(true)
   }, [])
+
+  React.useEffect(() => {
+    if (selectedResponseDetail) {
+      const marksMap: { [qId: string]: number } = {}
+      selectedResponseDetail.questionDetails.forEach(q => {
+        marksMap[q.questionId] = q.allocatedMarks
+      })
+      setEvaluationMarks(marksMap)
+    } else {
+      setEvaluationMarks({})
+    }
+  }, [selectedResponseDetail])
 
   const isStaff = activeRole === "owner" || activeRole === "super_admin" || activeRole === "teacher"
   const isStudent = activeRole === "student"
@@ -347,19 +402,22 @@ export default function ExamsPage() {
   }
 
   // Derived filters
-  const filteredExams = exams.filter(e => {
+  const isAdmissionTab = activeTab === "admission"
+  const sourceExams = isAdmissionTab ? admissionTests : exams
+
+  const filteredExams = sourceExams.filter(e => {
     // Role scoping: students and parents only see their assigned published/completed exams
     if (!isStaff) {
       if (e.status === "Draft") return false
       if (!activeStudent || !isExamForStudent(e, activeStudent)) return false
     }
 
-    const matchesTab = activeTab === "all" || e.status.toLowerCase() === activeTab.toLowerCase()
+    const matchesTab = isAdmissionTab || activeTab === "all" || e.status.toLowerCase() === activeTab.toLowerCase()
     const query = searchQuery.toLowerCase()
     const matchesSearch = e.title.toLowerCase().includes(query) || e.description.toLowerCase().includes(query)
     
     let matchesBatch = true
-    if (batchFilter !== "all") {
+    if (!isAdmissionTab && batchFilter !== "all") {
       matchesBatch = e.targetType === "batch" && e.targetBatchId === batchFilter
     }
 
@@ -544,6 +602,7 @@ export default function ExamsPage() {
     setFormQuestions([])
     setFormScheduledDate("")
     setFormScheduledTime("")
+    setFormIsAdmissionTest(false)
   }
 
   // Load Exam into form for editing
@@ -565,6 +624,10 @@ export default function ExamsPage() {
     setFormScheduledTime(exam.scheduledTime || "")
     // Deep clone questions to avoid reference mutations
     setFormQuestions(JSON.parse(JSON.stringify(exam.questions)))
+    
+    const isAdmission = admissionTests.some(at => at.id === exam.id)
+    setFormIsAdmissionTest(isAdmission)
+    
     setIsCreatorOpen(true)
   }
 
@@ -581,7 +644,7 @@ export default function ExamsPage() {
       return
     }
 
-    if (formTargetType === "batch" && !formTargetBatchId) {
+    if (!formIsAdmissionTest && formTargetType === "batch" && !formTargetBatchId) {
       toast({
         variant: "destructive",
         title: "Validation Failed",
@@ -590,7 +653,7 @@ export default function ExamsPage() {
       return
     }
 
-    if (formTargetType === "student" && !formTargetStudentId) {
+    if (!formIsAdmissionTest && formTargetType === "student" && !formTargetStudentId) {
       toast({
         variant: "destructive",
         title: "Validation Failed",
@@ -650,71 +713,139 @@ export default function ExamsPage() {
       }
     }
 
-    let updatedExams: Exam[] = []
+    if (formIsAdmissionTest) {
+      let updatedAdmissionTests: Exam[] = []
 
-    if (formId) {
-      // Edit mode
-      updatedExams = exams.map(ex => {
-        if (ex.id === formId) {
-          return {
-            ...ex,
-            title: formTitle.trim(),
-            description: formDescription.trim(),
-            duration: Number(formDuration),
-            totalMarks: totalQuestionsMarks, // auto sum marks
-            targetType: formTargetType,
-            targetBatchId: formTargetType === "batch" ? formTargetBatchId : undefined,
-            targetStudentId: formTargetType === "student" ? formTargetStudentId : undefined,
-            status: formStatus,
-            scheduledDate: formScheduledDate || undefined,
-            scheduledTime: formScheduledTime || undefined,
-            questions: formQuestions
+      if (formId) {
+        // Edit mode
+        updatedAdmissionTests = admissionTests.map(ex => {
+          if (ex.id === formId) {
+            return {
+              ...ex,
+              title: formTitle.trim(),
+              description: formDescription.trim(),
+              duration: Number(formDuration),
+              totalMarks: totalQuestionsMarks, // auto sum marks
+              targetType: "batch", // default fallback target
+              status: formStatus,
+              scheduledDate: formScheduledDate || undefined,
+              scheduledTime: formScheduledTime || undefined,
+              questions: formQuestions
+            }
           }
-        }
-        return ex
-      })
+          return ex
+        })
 
-      toast({
-        title: "Exam Details Adjusted ✓",
-        description: `Successfully modified properties for "${formTitle.trim()}".`,
-      })
-    } else {
-      // Create mode
-      const newExam: Exam = {
-        id: `EXM-${Math.floor(100 + Math.random() * 900)}`,
-        title: formTitle.trim(),
-        description: formDescription.trim(),
-        duration: Number(formDuration),
-        totalMarks: totalQuestionsMarks,
-        targetType: formTargetType,
-        targetBatchId: formTargetType === "batch" ? formTargetBatchId : undefined,
-        targetStudentId: formTargetType === "student" ? formTargetStudentId : undefined,
-        status: formStatus,
-        createdAt: new Date().toISOString().split("T")[0],
-        scheduledDate: formScheduledDate || undefined,
-        scheduledTime: formScheduledTime || undefined,
-        questions: formQuestions
+        toast({
+          title: "Admission Test Adjusted ✓",
+          description: `Successfully modified properties for "${formTitle.trim()}".`,
+        })
+      } else {
+        // Create mode
+        const newExam: Exam = {
+          id: `EXM-${Math.floor(100 + Math.random() * 900)}`,
+          title: formTitle.trim(),
+          description: formDescription.trim(),
+          duration: Number(formDuration),
+          totalMarks: totalQuestionsMarks,
+          targetType: "batch",
+          status: formStatus,
+          createdAt: new Date().toISOString().split("T")[0],
+          scheduledDate: formScheduledDate || undefined,
+          scheduledTime: formScheduledTime || undefined,
+          questions: formQuestions
+        }
+
+        updatedAdmissionTests = [newExam, ...admissionTests]
+
+        toast({
+          title: "Admission Test Created ✓",
+          description: `Successfully registered "${formTitle.trim()}" in the database logs.`,
+        })
       }
 
-      updatedExams = [newExam, ...exams]
+      setAdmissionTests(updatedAdmissionTests)
+      setScopedData<Exam[]>("admission_tests", updatedAdmissionTests)
+    } else {
+      let updatedExams: Exam[] = []
 
-      toast({
-        title: "Exam Created ✓",
-        description: `Successfully registered "${formTitle.trim()}" in the database logs.`,
-      })
+      if (formId) {
+        // Edit mode
+        updatedExams = exams.map(ex => {
+          if (ex.id === formId) {
+            return {
+              ...ex,
+              title: formTitle.trim(),
+              description: formDescription.trim(),
+              duration: Number(formDuration),
+              totalMarks: totalQuestionsMarks, // auto sum marks
+              targetType: formTargetType,
+              targetBatchId: formTargetType === "batch" ? formTargetBatchId : undefined,
+              targetStudentId: formTargetType === "student" ? formTargetStudentId : undefined,
+              status: formStatus,
+              scheduledDate: formScheduledDate || undefined,
+              scheduledTime: formScheduledTime || undefined,
+              questions: formQuestions
+            }
+          }
+          return ex
+        })
+
+        toast({
+          title: "Exam Details Adjusted ✓",
+          description: `Successfully modified properties for "${formTitle.trim()}".`,
+        })
+      } else {
+        // Create mode
+        const newExam: Exam = {
+          id: `EXM-${Math.floor(100 + Math.random() * 900)}`,
+          title: formTitle.trim(),
+          description: formDescription.trim(),
+          duration: Number(formDuration),
+          totalMarks: totalQuestionsMarks,
+          targetType: formTargetType,
+          targetBatchId: formTargetType === "batch" ? formTargetBatchId : undefined,
+          targetStudentId: formTargetType === "student" ? formTargetStudentId : undefined,
+          status: formStatus,
+          createdAt: new Date().toISOString().split("T")[0],
+          scheduledDate: formScheduledDate || undefined,
+          scheduledTime: formScheduledTime || undefined,
+          questions: formQuestions
+        }
+
+        updatedExams = [newExam, ...exams]
+
+        toast({
+          title: "Exam Created ✓",
+          description: `Successfully registered "${formTitle.trim()}" in the database logs.`,
+        })
+      }
+
+      setExams(updatedExams)
+      setScopedData<Exam[]>("exams", updatedExams)
     }
 
-    setExams(updatedExams)
-    setScopedData<Exam[]>("exams", updatedExams)
     resetForm()
     setIsCreatorOpen(false)
   }
 
   // Delete Exam
   const handleDeleteExam = (id: string, title: string) => {
-    const updated = exams.filter(e => e.id !== id)
-    setExams(updated)
-    setScopedData<Exam[]>("exams", updated)
+    const isAdmission = admissionTests.some(at => at.id === id)
+    if (isAdmission) {
+      const updated = admissionTests.filter(e => e.id !== id)
+      setAdmissionTests(updated)
+      setScopedData<Exam[]>("admission_tests", updated)
+      
+      // Clean up any responses associated with this test
+      const updatedResponses = admissionResponses.filter(r => r.examId !== id)
+      setAdmissionResponses(updatedResponses)
+      setScopedData<AdmissionResponse[]>("admission_responses", updatedResponses)
+    } else {
+      const updated = exams.filter(e => e.id !== id)
+      setExams(updated)
+      setScopedData<Exam[]>("exams", updated)
+    }
     toast({
       title: "Exam Removed",
       description: `Permanently deleted "${title}" and associated questions.`,
@@ -724,18 +855,96 @@ export default function ExamsPage() {
 
   // Toggle Status: Draft -> Published -> Completed
   const toggleStatus = (id: string, status: Exam["status"]) => {
-    const updated = exams.map(e => {
-      if (e.id === id) {
-        return { ...e, status }
-      }
-      return e
-    })
-    setExams(updated)
-    setScopedData<Exam[]>("exams", updated)
+    const isAdmission = admissionTests.some(at => at.id === id)
+    if (isAdmission) {
+      const updated = admissionTests.map(e => e.id === id ? { ...e, status } : e)
+      setAdmissionTests(updated)
+      setScopedData<Exam[]>("admission_tests", updated)
+    } else {
+      const updated = exams.map(e => e.id === id ? { ...e, status } : e)
+      setExams(updated)
+      setScopedData<Exam[]>("exams", updated)
+    }
     toast({
       title: "Status Updated",
       description: `Exam status transitioned to "${status}".`,
     })
+  }
+
+  // Copy Shareable Link helper
+  const handleCopyShareLink = (examId: string) => {
+    if (typeof window === "undefined") return
+    const shareLink = `${window.location.origin}/admission-test?id=${examId}&tenant=${activeTenantId}`
+    navigator.clipboard.writeText(shareLink)
+    toast({
+      title: "Assessment Link Copied ✓",
+      description: "Share this link with candidates to let them take the admission test.",
+    })
+  }
+
+  const handleDeleteResponse = (responseId: string) => {
+    if (typeof window === "undefined") return
+    if (!window.confirm("Are you sure you want to permanently delete this candidate response? This action is irreversible.")) return
+    
+    const updated = admissionResponses.filter(r => r.id !== responseId)
+    setAdmissionResponses(updated)
+    setScopedData<AdmissionResponse[]>("admission_responses", updated)
+    
+    toast({
+      title: "Response Deleted",
+      description: "The candidate's response has been successfully removed from the registry.",
+      variant: "destructive"
+    })
+  }
+
+  const handleDraftMarkChange = (qId: string, val: number, maxMarks: number) => {
+    const scoreVal = Math.min(maxMarks, Math.max(0, isNaN(val) ? 0 : val))
+    setEvaluationMarks(prev => ({
+      ...prev,
+      [qId]: scoreVal
+    }))
+  }
+
+  const handleSaveEvaluation = () => {
+    if (!selectedResponseDetail) return
+
+    let newTotalScore = 0
+    
+    const updatedDetails = selectedResponseDetail.questionDetails.map(qd => {
+      const allocated = evaluationMarks[qd.questionId] !== undefined ? evaluationMarks[qd.questionId] : qd.allocatedMarks
+      newTotalScore += allocated
+      
+      const isCorrect = qd.type === "long_answer" ? allocated > 0 : qd.isCorrect
+
+      return {
+        ...qd,
+        allocatedMarks: allocated,
+        isCorrect
+      }
+    })
+
+    const updatedResponse: AdmissionResponse = {
+      ...selectedResponseDetail,
+      score: newTotalScore,
+      gradedStatus: "Graded",
+      questionDetails: updatedDetails
+    }
+
+    const updatedResponses = admissionResponses.map(r => 
+      r.id === selectedResponseDetail.id ? updatedResponse : r
+    )
+
+    setAdmissionResponses(updatedResponses)
+    setScopedData<AdmissionResponse[]>("admission_responses", updatedResponses)
+    
+    setSelectedResponseDetail(updatedResponse)
+    
+    toast({
+      title: "Evaluation Saved ✓",
+      description: `Successfully graded assessment for ${selectedResponseDetail.studentName}. Final score: ${newTotalScore}/${selectedResponseDetail.totalMarks}.`,
+    })
+
+    setIsDetailResponseOpen(false)
   }
 
   // Print/PDF Download helper using html2pdf.js
@@ -1005,6 +1214,7 @@ export default function ExamsPage() {
                   <TabsTrigger value="published" className="text-[10px] uppercase tracking-wider font-bold rounded-md px-4 py-1 h-7">{isStaff ? "Published" : "Upcoming / Active"}</TabsTrigger>
                   {isStaff && <TabsTrigger value="draft" className="text-[10px] uppercase tracking-wider font-bold rounded-md px-4 py-1 h-7">Drafts</TabsTrigger>}
                   <TabsTrigger value="completed" className="text-[10px] uppercase tracking-wider font-bold rounded-md px-4 py-1 h-7">Completed</TabsTrigger>
+                  {isStaff && <TabsTrigger value="admission" className="text-[10px] uppercase tracking-wider font-bold rounded-md px-4 py-1 h-7">Admission Tests</TabsTrigger>}
                 </TabsList>
               </div>
 
@@ -1032,20 +1242,51 @@ export default function ExamsPage() {
                                 <span className="font-bold text-slate-800 text-sm">{e.title}</span>
                                 <span className="text-slate-400 line-clamp-1 max-w-[280px]">{e.description}</span>
                                 {e.scheduledDate && (
-                                  <span className="text-[10px] font-bold text-indigo-650 flex items-center gap-1 mt-1 bg-indigo-50 border border-indigo-100/60 rounded-lg px-2 py-0.5 w-fit">
+                                  <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 mt-1 bg-indigo-50 border border-indigo-100/60 rounded-lg px-2 py-0.5 w-fit">
                                     <Calendar className="size-3 text-indigo-600" /> Scheduled: {e.scheduledDate} {e.scheduledTime ? `at ${e.scheduledTime}` : ""}
                                   </span>
                                 )}
                               </div>
                             </td>
-                            <td className="py-4">{getTargetBadge(e)}</td>
-                            <td className="py-4 font-semibold text-slate-650">{e.questions.length} Questions</td>
-                            <td className="py-4 font-medium text-slate-650 flex items-center gap-1.5 mt-2.5">
+                            <td className="py-4">
+                              {isAdmissionTab ? (
+                                <Badge variant="outline" className="bg-purple-50/50 text-purple-700 border-purple-100 flex items-center gap-1 shrink-0 w-fit">
+                                  <Award className="size-3" /> Public Admission Test
+                                </Badge>
+                              ) : (
+                                getTargetBadge(e)
+                              )}
+                            </td>
+                            <td className="py-4 font-semibold text-slate-600">{e.questions.length} Questions</td>
+                            <td className="py-4 font-medium text-slate-600 flex items-center gap-1.5 mt-2.5">
                               <Clock className="size-3.5 text-slate-400" /> {e.duration} Mins
                             </td>
-                            <td className="py-4 font-mono font-bold text-indigo-650 text-xs">{e.totalMarks} Marks</td>
+                            <td className="py-4 font-mono font-bold text-indigo-600 text-xs">{e.totalMarks} Marks</td>
                             <td className="py-4">{getStatusBadge(e.status)}</td>
-                            <td className="py-4 text-right pr-6 space-x-1">
+                            <td className="py-4 text-right pr-6 space-x-1.5">
+                              {/* Copy Link & Responses for Admission Tab */}
+                              {isAdmissionTab && (
+                                <>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-7 px-2 rounded-lg border-indigo-100 text-indigo-600 hover:bg-indigo-50 text-[10px] font-bold uppercase tracking-wider"
+                                    onClick={() => handleCopyShareLink(e.id)}
+                                  >
+                                    Copy Link
+                                  </Button>
+
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-7 px-2 rounded-lg border-emerald-100 text-emerald-600 hover:bg-emerald-50 text-[10px] font-bold uppercase tracking-wider"
+                                    onClick={() => { setSelectedTestForResponses(e); setIsResponsesOpen(true) }}
+                                  >
+                                    Responses ({admissionResponses.filter(r => r.examId === e.id).length})
+                                  </Button>
+                                </>
+                              )}
+
                               {/* Preview paper */}
                               <Button 
                                 variant="outline" 
@@ -1085,7 +1326,7 @@ export default function ExamsPage() {
                                     <Button 
                                       variant="outline" 
                                       size="sm" 
-                                      className="h-7 px-2 rounded-lg border-emerald-100 text-emerald-650 hover:bg-emerald-50 text-[10px] font-bold uppercase tracking-wider"
+                                      className="h-7 px-2 rounded-lg border-emerald-100 text-emerald-600 hover:bg-emerald-50 text-[10px] font-bold uppercase tracking-wider"
                                       onClick={() => toggleStatus(e.id, "Completed")}
                                     >
                                       Close
@@ -1135,7 +1376,13 @@ export default function ExamsPage() {
                         </div>
 
                         <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
-                          {getTargetBadge(e)}
+                          {isAdmissionTab ? (
+                            <Badge variant="outline" className="bg-purple-50/50 text-purple-700 border-purple-100 flex items-center gap-1 shrink-0 w-fit">
+                              <Award className="size-3" /> Public Admission Test
+                            </Badge>
+                          ) : (
+                            getTargetBadge(e)
+                          )}
                           <Badge variant="secondary" className="text-[10px]">{e.questions.length} Questions</Badge>
                           <Badge variant="secondary" className="text-[10px] font-mono">{e.duration} Min</Badge>
                           <Badge variant="secondary" className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border-indigo-100">{e.totalMarks} Marks</Badge>
@@ -1144,13 +1391,34 @@ export default function ExamsPage() {
                         <div className="flex items-center justify-between pt-2">
                           <div className="flex flex-col gap-0.5 text-left">
                             {e.scheduledDate && (
-                              <span className="text-[10px] text-indigo-650 font-bold flex items-center gap-1">
+                              <span className="text-[10px] text-indigo-600 font-bold flex items-center gap-1">
                                 <Calendar className="size-3 text-indigo-600" /> {e.scheduledDate} {e.scheduledTime ? `@ ${e.scheduledTime}` : ""}
                               </span>
                             )}
                             <span className="text-[9px] text-slate-400 font-medium">Created: {e.createdAt}</span>
                           </div>
                           <div className="flex items-center gap-1">
+                            {isAdmissionTab && (
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 px-2 rounded-lg text-[10px] font-bold uppercase border-indigo-100 text-indigo-600 hover:bg-indigo-50"
+                                  onClick={() => handleCopyShareLink(e.id)}
+                                >
+                                  Link
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 px-2 rounded-lg text-[10px] font-bold uppercase border-emerald-100 text-emerald-600 hover:bg-emerald-50"
+                                  onClick={() => { setSelectedTestForResponses(e); setIsResponsesOpen(true) }}
+                                >
+                                  Responses ({admissionResponses.filter(r => r.examId === e.id).length})
+                                </Button>
+                              </>
+                            )}
+
                             <Button 
                               variant="outline" 
                               size="sm" 
@@ -1192,7 +1460,7 @@ export default function ExamsPage() {
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  className="h-8 w-8 p-0 rounded-lg text-red-500 border-red-100 hover:bg-red-50"
+                                  className="h-8 w-8 p-0 rounded-lg text-red-500 border-red-100 hover:bg-red-55"
                                   onClick={() => handleDeleteExam(e.id, e.title)}
                                 >
                                   <Trash2 className="size-3.5" />
@@ -1319,67 +1587,102 @@ export default function ExamsPage() {
                     />
                   </div>
 
-                  {/* Target Audience selectors */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-slate-150">
-                    
-                    {/* Target Type Switcher */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Target Audience Type</Label>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant={formTargetType === "batch" ? "default" : "outline"}
-                          size="sm"
-                          className="flex-1 rounded-xl text-[10px] font-bold uppercase tracking-wider h-9"
-                          onClick={() => { setFormTargetType("batch"); setFormTargetStudentId("") }}
-                        >
-                          <Users className="size-3.5 mr-1" /> Batchwise
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={formTargetType === "student" ? "default" : "outline"}
-                          size="sm"
-                          className="flex-1 rounded-xl text-[10px] font-bold uppercase tracking-wider h-9"
-                          onClick={() => { setFormTargetType("student"); setFormTargetBatchId("") }}
-                        >
-                          <User className="size-3.5 mr-1" /> Individual
-                        </Button>
+                  {/* Assessment Category Switcher */}
+                  <div className="pt-3 border-t border-slate-150 space-y-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Assessment Category *</Label>
+                    <div className="flex gap-2 w-full sm:w-80">
+                      <Button
+                        type="button"
+                        variant={!formIsAdmissionTest ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1 rounded-xl text-[10px] font-bold uppercase tracking-wider h-9"
+                        onClick={() => setFormIsAdmissionTest(false)}
+                      >
+                        Regular Academic Exam
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={formIsAdmissionTest ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1 rounded-xl text-[10px] font-bold uppercase tracking-wider h-9"
+                        onClick={() => setFormIsAdmissionTest(true)}
+                      >
+                        Public Admission Test
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Target Audience selectors (only if NOT an admission test) */}
+                  {!formIsAdmissionTest ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-slate-150 animate-in fade-in duration-200">
+                      
+                      {/* Target Type Switcher */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Target Audience Type</Label>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant={formTargetType === "batch" ? "default" : "outline"}
+                            size="sm"
+                            className="flex-1 rounded-xl text-[10px] font-bold uppercase tracking-wider h-9"
+                            onClick={() => { setFormTargetType("batch"); setFormTargetStudentId("") }}
+                          >
+                            <Users className="size-3.5 mr-1" /> Batchwise
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={formTargetType === "student" ? "default" : "outline"}
+                            size="sm"
+                            className="flex-1 rounded-xl text-[10px] font-bold uppercase tracking-wider h-9"
+                            onClick={() => { setFormTargetType("student"); setFormTargetBatchId("") }}
+                          >
+                            <User className="size-3.5 mr-1" /> Individual
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Target Batch Select */}
+                      {formTargetType === "batch" && (
+                        <div className="space-y-1.5 md:col-span-2">
+                          <Label htmlFor="target-batch" className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Target Batch</Label>
+                          <Select value={formTargetBatchId} onValueChange={setFormTargetBatchId}>
+                            <SelectTrigger id="target-batch" className="rounded-xl text-xs bg-white h-10">
+                              <SelectValue placeholder="Select Batch" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                              {batches.map(b => (
+                                <SelectItem key={b.id} value={b.id} className="text-xs font-medium">
+                                  {b.name} ({b.subject})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {/* Target Student Select */}
+                      {formTargetType === "student" && (
+                        <div className="space-y-1.5 md:col-span-2">
+                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Target Student</Label>
+                          <SearchableStudentDropdown
+                            options={studentOptions}
+                            value={formTargetStudentId}
+                            onChange={(id) => setFormTargetStudentId(id)}
+                            placeholder="Search live student directory..."
+                          />
+                        </div>
+                      )}
+
+                    </div>
+                  ) : (
+                    <div className="p-3.5 bg-indigo-55/40 border border-indigo-100 rounded-xl text-xs text-indigo-700 font-medium flex items-start gap-2.5 pt-2 border-t border-slate-150 animate-in fade-in duration-200">
+                      <Award className="size-4.5 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Public Admission Test Designated: </span>
+                        This test will be accessible to any unregistered prospective candidate via a shareable public link. Student profile scoping (batches/student IDs) is bypassed.
                       </div>
                     </div>
-
-                    {/* Target Batch Select */}
-                    {formTargetType === "batch" && (
-                      <div className="space-y-1.5 md:col-span-2">
-                        <Label htmlFor="target-batch" className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Target Batch</Label>
-                        <Select value={formTargetBatchId} onValueChange={setFormTargetBatchId}>
-                          <SelectTrigger id="target-batch" className="rounded-xl text-xs bg-white h-10">
-                            <SelectValue placeholder="Select Batch" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl">
-                            {batches.map(b => (
-                              <SelectItem key={b.id} value={b.id} className="text-xs font-medium">
-                                {b.name} ({b.subject})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    {/* Target Student Select */}
-                    {formTargetType === "student" && (
-                      <div className="space-y-1.5 md:col-span-2">
-                        <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Target Student</Label>
-                        <SearchableStudentDropdown
-                          options={studentOptions}
-                          value={formTargetStudentId}
-                          onChange={(id) => setFormTargetStudentId(id)}
-                          placeholder="Search live student directory..."
-                        />
-                      </div>
-                    )}
-
-                  </div>
+                  )}
 
                 </CardContent>
               </Card>
@@ -1743,15 +2046,14 @@ export default function ExamsPage() {
                   {selectedExam.questions.map((q, idx) => (
                     <div key={q.id} className="space-y-3 leading-relaxed text-sm">
                       
-                      {/* Question Header (Text and Marks) */}
-                      <div className="flex items-start justify-between gap-4">
+                      {/* Question Header (Te                      <div className="flex items-start justify-between gap-4">
                         <div className="space-y-1 font-serif">
                           <p className="text-slate-950 font-medium">
                             <span className="font-bold mr-1.5">Q{idx + 1}.</span>
                             {q.questionText}
                           </p>
                         </div>
-                        <span className="font-sans font-bold text-xs text-slate-650 shrink-0">
+                        <span className="font-sans font-bold text-xs text-slate-600 shrink-0">
                           [{q.marks} Marks]
                         </span>
                       </div>
@@ -1761,7 +2063,7 @@ export default function ExamsPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pl-6 font-sans text-xs text-slate-700">
                           {q.options.map(opt => (
                             <div key={opt.id} className="flex items-center gap-2">
-                              <span className="size-4 rounded-full border border-slate-450 flex items-center justify-center text-[9px] font-bold font-mono shrink-0">
+                              <span className="size-4 rounded-full border border-slate-300 flex items-center justify-center text-[9px] font-bold font-mono shrink-0">
                                 {opt.id}
                               </span>
                               <span>{opt.text}</span>
@@ -1788,7 +2090,7 @@ export default function ExamsPage() {
 
                       {/* Correct Answers Key (Rendered conditionally on-screen/print based on toggle) */}
                       {showAnswers && (
-                        <div className="pl-6 text-[10px] bg-slate-50/70 p-2.5 rounded-xl border border-slate-200/60 flex items-center gap-2 text-slate-650 font-sans font-semibold w-fit mt-1.5 animate-in fade-in-0 duration-200">
+                        <div className="pl-6 text-[10px] bg-slate-50/70 p-2.5 rounded-xl border border-slate-200/60 flex items-center gap-2 text-slate-600 font-sans font-semibold w-fit mt-1.5 animate-in fade-in-0 duration-200">
                           <Badge variant="outline" className="bg-indigo-50 text-[9px] font-black uppercase tracking-widest text-indigo-700 border-indigo-200">Answer Key</Badge>
                           <span>
                             {q.type === "checkbox" && Array.isArray(q.correctAnswer) ? (
@@ -1816,6 +2118,596 @@ export default function ExamsPage() {
             )}
           </div>
 
+        </DialogContent>
+      </Dialog>
+
+      {/* ============================================================== */}
+      {/* 3. ADMISSION TEST STATS & RESPONSES DIALOG                      */}
+      {/* ============================================================== */}
+      <Dialog open={isResponsesOpen} onOpenChange={setIsResponsesOpen}>
+        <DialogContent className="max-w-5xl rounded-2xl h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50">
+          {selectedTestForResponses ? (
+            <div className="h-full flex flex-col">
+              
+              {/* Header */}
+              <DialogHeader className="p-6 border-b bg-white shrink-0">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="size-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                      <Users className="size-4.5" />
+                    </div>
+                    <div>
+                      <DialogTitle className="font-headline font-bold text-lg">
+                        Admissions Dashboard
+                      </DialogTitle>
+                      <DialogDescription className="text-xs">
+                        Stats & responses for: <span className="font-bold text-indigo-600">{selectedTestForResponses.title}</span> (ID: {selectedTestForResponses.id})
+                      </DialogDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-lg text-xs font-bold border-slate-200"
+                      onClick={() => handleCopyShareLink(selectedTestForResponses.id)}
+                    >
+                      <Copy className="size-3.5 mr-1" /> Copy Public Link
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-lg"
+                      onClick={() => setIsResponsesOpen(false)}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                
+                {/* Metrics Cards */}
+                {(() => {
+                  const currentTestResponses = admissionResponses.filter(r => r.examId === selectedTestForResponses.id)
+                  const totalAppeared = currentTestResponses.length
+                  const avgScore = totalAppeared > 0 
+                    ? (currentTestResponses.reduce((sum, r) => sum + r.score, 0) / totalAppeared).toFixed(1) 
+                    : "0.0"
+                  const highScore = totalAppeared > 0 
+                    ? Math.max(...currentTestResponses.map(r => r.score)) 
+                    : 0
+                  const passRate = totalAppeared > 0 
+                    ? ((currentTestResponses.filter(r => (r.score / r.totalMarks) >= 0.5).length / totalAppeared) * 100).toFixed(0) + "%" 
+                    : "0%"
+
+                  return (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* Card 1: Total Appeared */}
+                      <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-100 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+                        <div className="size-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-600/10">
+                          <Users className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-black font-headline text-indigo-950 leading-none">{totalAppeared}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 mt-1">Total Appeared</p>
+                        </div>
+                      </div>
+
+                      {/* Card 2: Average Score */}
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-100 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+                        <div className="size-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-600/10">
+                          <Award className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-black font-headline text-purple-950 leading-none">
+                            {avgScore} <span className="text-xs text-purple-600 font-bold font-sans">/ {selectedTestForResponses.totalMarks}</span>
+                          </p>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-purple-600 mt-1">Average Score</p>
+                        </div>
+                      </div>
+
+                      {/* Card 3: Topper Score */}
+                      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+                        <div className="size-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/10">
+                          <CheckCircle2 className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-black font-headline text-emerald-950 leading-none">
+                            {highScore} <span className="text-xs text-emerald-600 font-bold font-sans">/ {selectedTestForResponses.totalMarks}</span>
+                          </p>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mt-1">Highest Score</p>
+                        </div>
+                      </div>
+
+                      {/* Card 4: Pass Rate */}
+                      <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-100 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+                        <div className="size-10 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-600/10">
+                          <GraduationCap className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-black font-headline text-amber-950 leading-none">{passRate}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mt-1">Pass Rate (≥ 50%)</p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Candidate Responses Table */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-indigo-600">Candidate Sheet Submissions</h3>
+                  
+                  <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <Table className="text-xs">
+                        <TableHeader className="bg-slate-50/75">
+                          <TableRow className="border-b border-slate-200">
+                            <TableHead className="font-bold uppercase tracking-wider py-3.5 pl-6 text-slate-500">Candidate Details</TableHead>
+                            <TableHead className="font-bold uppercase tracking-wider py-3.5 text-slate-500">Target Class</TableHead>
+                            <TableHead className="font-bold uppercase tracking-wider py-3.5 text-slate-500">Performance Score</TableHead>
+                            <TableHead className="font-bold uppercase tracking-wider py-3.5 text-slate-500">Submitted Time</TableHead>
+                            <TableHead className="font-bold uppercase tracking-wider py-3.5 text-slate-500">Status</TableHead>
+                            <TableHead className="font-bold uppercase tracking-wider py-3.5 text-right pr-6 text-slate-500">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(() => {
+                            const currentTestResponses = admissionResponses.filter(r => r.examId === selectedTestForResponses.id)
+                            
+                            if (currentTestResponses.length === 0) {
+                              return (
+                                <TableRow>
+                                  <td colSpan={6} className="py-16 text-center text-slate-400 font-medium">
+                                    <div className="flex flex-col items-center gap-3 justify-center max-w-xs mx-auto">
+                                      <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-300">
+                                        <AlertCircle className="size-6" />
+                                      </div>
+                                      <div>
+                                        <p className="font-bold text-slate-700 text-sm">No Candidate Responses</p>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                          No prospective students have submitted answers for this admission test yet.
+                                        </p>
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl h-9 mt-2 px-4 gap-1.5"
+                                        onClick={() => handleCopyShareLink(selectedTestForResponses.id)}
+                                      >
+                                        <Copy className="size-3.5" /> Copy Shareable Link
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </TableRow>
+                              )
+                            }
+
+                            return currentTestResponses.map((r) => {
+                              const percentage = r.totalMarks > 0 ? ((r.score / r.totalMarks) * 100) : 0
+                              const isPass = percentage >= 50
+                              return (
+                                <TableRow key={r.id} className="hover:bg-slate-50/50 border-b border-slate-100 transition-colors">
+                                  <td className="py-3.5 pl-6">
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="font-bold text-slate-800 text-sm">{r.studentName}</span>
+                                      <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-2">
+                                        {r.studentEmail && <span>{r.studentEmail}</span>}
+                                        {r.studentEmail && r.studentPhone && <span>·</span>}
+                                        {r.studentPhone && <span>{r.studentPhone}</span>}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="py-3.5 font-semibold text-slate-700">{r.studentClass}</td>
+                                  <td className="py-3.5">
+                                    <div className="flex flex-col gap-1 w-28">
+                                      <div className="flex items-center justify-between text-[10px] font-bold">
+                                        <span className="text-slate-700">{r.score} / {r.totalMarks} Marks</span>
+                                        <span className={cn(isPass ? "text-emerald-600" : "text-amber-600")}>{percentage.toFixed(0)}%</span>
+                                      </div>
+                                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                        <div 
+                                          className={cn("h-full rounded-full transition-all", isPass ? "bg-emerald-500" : "bg-amber-500")}
+                                          style={{ width: `${Math.min(100, percentage)}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="py-3.5 font-medium text-slate-500">
+                                    {new Date(r.submittedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                                  </td>
+                                  <td className="py-3.5">
+                                    {r.gradedStatus === "Graded" ? (
+                                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[10px] hover:bg-emerald-50/80">
+                                        Graded
+                                      </Badge>
+                                    ) : (
+                                      <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px] hover:bg-amber-50/80 animate-pulse">
+                                        Pending Grading
+                                      </Badge>
+                                    )}
+                                  </td>
+                                  <td className="py-3.5 text-right pr-6 space-x-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="h-8 rounded-lg border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 text-xs font-bold gap-1 transition-colors"
+                                      onClick={() => { setSelectedResponseDetail(r); setIsDetailResponseOpen(true) }}
+                                    >
+                                      Review Paper
+                                    </Button>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="h-8 w-8 p-0 rounded-lg text-red-500 border-red-100 hover:bg-red-50 hover:border-red-200 transition-colors"
+                                      onClick={() => handleDeleteResponse(r.id)}
+                                      title="Delete Response"
+                                    >
+                                      <Trash2 className="size-3.5" />
+                                    </Button>
+                                  </td>
+                                </TableRow>
+                              )
+                            })
+                          })()}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          ) : (
+            <div className="p-8 text-center text-slate-400 italic">
+              No exam responses context loaded.
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ============================================================== */}
+      {/* 4. CANDIDATE DETAILED RESPONSE REVIEW & GRADING DIALOG         */}
+      {/* ============================================================== */}
+      <Dialog open={isDetailResponseOpen} onOpenChange={setIsDetailResponseOpen}>
+        <DialogContent className="max-w-5xl rounded-2xl h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50">
+          {selectedResponseDetail ? (
+            <div className="h-full flex flex-col">
+              
+              {/* Header */}
+              <DialogHeader className="p-6 border-b bg-white shrink-0 flex flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="size-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <FileText className="size-4.5" />
+                  </div>
+                  <div>
+                    <DialogTitle className="font-headline font-bold text-lg">
+                      Assessment Sheet Review
+                    </DialogTitle>
+                    <DialogDescription className="text-xs">
+                      Candidate: <span className="font-bold text-slate-900">{selectedResponseDetail.studentName}</span> · Target Class: <span className="font-semibold text-slate-600">{selectedResponseDetail.studentClass}</span>
+                    </DialogDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className={cn(
+                    "text-[10px] font-black uppercase tracking-wider border-none px-2.5 py-1",
+                    selectedResponseDetail.gradedStatus === "Graded" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+                  )}>
+                    {selectedResponseDetail.gradedStatus}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg"
+                    onClick={() => setIsDetailResponseOpen(false)}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              </DialogHeader>
+
+              {/* Scrollable Body */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                  
+                  {/* Left Column: Questions and Student Answers */}
+                  <div className="lg:col-span-2 space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-indigo-600">Graded Exam Sheet Questions</h3>
+                    
+                    {selectedResponseDetail.questionDetails.map((qd, index) => {
+                      // Find option details if they exist in the master test questions
+                      const masterQuestion = selectedTestForResponses?.questions.find(mq => mq.id === qd.questionId)
+                      const options = masterQuestion?.options
+
+                      return (
+                        <Card key={qd.questionId} className="border border-slate-200 bg-white rounded-xl overflow-hidden relative shadow-xs">
+                          
+                          {/* Question Card Header */}
+                          <div className="bg-slate-50/70 border-b px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+                            <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5 font-serif">
+                              <span className="size-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center font-sans">
+                                {index + 1}
+                              </span>
+                              Question Details
+                            </span>
+                            
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider border-none bg-slate-100 text-slate-500">
+                                {qd.type.replace("_", " ")}
+                              </Badge>
+                              <Badge variant="secondary" className="font-mono text-[10px] font-bold px-2 py-0.5">
+                                Max: {qd.marks} Marks
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {/* Question Card Content */}
+                          <CardContent className="p-4 space-y-4">
+                            
+                            {/* Question text */}
+                            <p className="text-sm font-medium leading-relaxed font-serif text-slate-900">
+                              {qd.questionText}
+                            </p>
+
+                            {/* Render Options if MCQ/Checkbox */}
+                            {(qd.type === "mcq" || qd.type === "checkbox") && options && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                                {options.map(opt => {
+                                  const isStudentSelected = qd.type === "mcq" 
+                                    ? qd.studentAnswer === opt.id
+                                    : Array.isArray(qd.studentAnswer) && qd.studentAnswer.includes(opt.id)
+                                  
+                                  const isCorrectOption = qd.type === "mcq"
+                                    ? qd.correctAnswer === opt.id
+                                    : Array.isArray(qd.correctAnswer) && qd.correctAnswer.includes(opt.id)
+
+                                  let buttonStyle = "border-slate-200 bg-white text-slate-750"
+                                  let checkIcon = null
+
+                                  if (isStudentSelected && isCorrectOption) {
+                                    buttonStyle = "border-emerald-500 bg-emerald-50/30 text-emerald-950 font-semibold ring-2 ring-emerald-500/10"
+                                    checkIcon = <Check className="size-4 text-emerald-600 shrink-0" />
+                                  } else if (isStudentSelected && !isCorrectOption) {
+                                    buttonStyle = "border-red-300 bg-red-50/20 text-red-955 ring-2 ring-red-500/5"
+                                    checkIcon = <X className="size-4 text-red-500 shrink-0" />
+                                  } else if (!isStudentSelected && isCorrectOption) {
+                                    buttonStyle = "border-emerald-300 bg-emerald-50/5 text-slate-800 border-dashed"
+                                  }
+
+                                  return (
+                                    <div 
+                                      key={opt.id}
+                                      className={cn(
+                                        "flex items-center gap-3 px-3 py-2.5 rounded-xl border text-xs font-sans transition-all",
+                                        buttonStyle
+                                      )}
+                                    >
+                                      <span className={cn(
+                                        "size-5 rounded-full border flex items-center justify-center font-bold text-[10px] shrink-0 font-mono",
+                                        isStudentSelected 
+                                          ? (isCorrectOption ? "bg-emerald-600 border-emerald-600 text-white" : "bg-red-500 border-red-500 text-white") 
+                                          : "border-slate-300 text-slate-400 bg-white"
+                                      )}>
+                                        {opt.id}
+                                      </span>
+                                      <span className="flex-1 truncate">{opt.text}</span>
+                                      {checkIcon}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+
+                            {/* Render Short Answer Details */}
+                            {qd.type === "short_answer" && (
+                              <div className="space-y-2 pt-2 border-t border-slate-100 font-sans">
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Student Response:</span>
+                                  <span className={cn("font-bold flex items-center gap-1 text-[11px]", qd.isCorrect ? "text-emerald-600" : "text-red-500")}>
+                                    {qd.isCorrect ? (
+                                      <><CheckCircle2 className="size-4" /> Correct (Auto-graded)</>
+                                    ) : (
+                                      <><AlertCircle className="size-4" /> Incorrect (Auto-graded)</>
+                                    )}
+                                  </span>
+                                </div>
+                                <p className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200/80 px-3.5 py-2.5 rounded-xl font-mono">
+                                  {qd.studentAnswer || <span className="italic font-normal text-slate-400">No Answer Submitted</span>}
+                                </p>
+                                <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1">
+                                  <span className="font-semibold text-slate-500 uppercase text-[9px] tracking-wider">Expected Answer:</span>
+                                  <span className="font-mono font-bold text-slate-800 bg-slate-150/50 px-2 py-0.5 rounded border border-slate-200/40">{qd.correctAnswer}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Render Long Answer & Manual Grade Input */}
+                            {qd.type === "long_answer" && (
+                              <div className="space-y-4 pt-2 border-t border-slate-100 font-sans">
+                                <div className="space-y-1.5">
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Candidate Detailed Response:</p>
+                                  <div className="text-xs leading-relaxed text-slate-800 bg-slate-50 border border-slate-200/80 p-4 rounded-xl whitespace-pre-wrap font-sans min-h-[80px]">
+                                    {qd.studentAnswer || <span className="italic text-slate-400">No Answer Submitted</span>}
+                                  </div>
+                                </div>
+                                
+                                {/* Grading interface */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-indigo-500/[0.03] border border-indigo-500/10 rounded-xl">
+                                  <div className="space-y-0.5">
+                                    <p className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                                      <Award className="size-3.5 text-indigo-650" /> Grade Student Sheet
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 font-medium">Review response content and allocate marks manually.</p>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={qd.marks}
+                                      className="w-16 h-8 text-xs font-mono font-bold text-center rounded-lg border-slate-250 bg-white"
+                                      value={evaluationMarks[qd.questionId] !== undefined ? evaluationMarks[qd.questionId] : qd.allocatedMarks}
+                                      onChange={e => handleDraftMarkChange(qd.questionId, Number(e.target.value), qd.marks)}
+                                    />
+                                    <span className="text-xs font-bold text-slate-500">/ {qd.marks} Marks</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Display auto-graded score for other types */}
+                            {qd.type !== "long_answer" && (
+                              <div className="flex justify-between items-center p-2.5 pt-3 border-t border-slate-100 rounded-lg text-xs font-sans">
+                                <span className="text-slate-500 font-semibold text-[10px] uppercase tracking-wider flex items-center gap-1">
+                                  <CheckCircle2 className="size-3.5 text-slate-400" /> Evaluation Sector
+                                </span>
+                                <span className="font-bold text-slate-700 bg-slate-50 border border-slate-200/50 px-2 py-0.5 rounded-lg font-mono">
+                                  Score: {qd.allocatedMarks} / {qd.marks}
+                                </span>
+                              </div>
+                            )}
+
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+
+                  {/* Right Column: Candidate Profile & Evaluation Summary */}
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Candidate Summary</h3>
+                    
+                    {/* Candidate Profile Card */}
+                    <Card className="border border-slate-200 bg-white rounded-xl shadow-xs p-4 space-y-3 font-sans">
+                      <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider border-b pb-2">Candidate Profile</h4>
+                      <div className="space-y-2.5 text-xs text-slate-650">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold">Full Name</span>
+                          <span className="font-bold text-slate-800 text-sm mt-0.5">{selectedResponseDetail.studentName}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold">Applied Class / Grade</span>
+                          <span className="font-semibold text-slate-700 mt-0.5">{selectedResponseDetail.studentClass}</span>
+                        </div>
+                        {selectedResponseDetail.studentEmail && (
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">Email Address</span>
+                            <span className="font-medium mt-0.5">{selectedResponseDetail.studentEmail}</span>
+                          </div>
+                        )}
+                        {selectedResponseDetail.studentPhone && (
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">Phone Number</span>
+                            <span className="font-medium mt-0.5">{selectedResponseDetail.studentPhone}</span>
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold">Submission Time</span>
+                          <span className="font-medium mt-0.5">
+                            {new Date(selectedResponseDetail.submittedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                          </span>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Performance Summary Card */}
+                    {(() => {
+                      const totalScore = selectedResponseDetail.questionDetails.reduce((sum, qd) => {
+                        const val = evaluationMarks[qd.questionId] !== undefined ? evaluationMarks[qd.questionId] : qd.allocatedMarks
+                        return sum + val
+                      }, 0)
+                      
+                      const totalMaxMarks = selectedResponseDetail.totalMarks
+                      const scorePct = totalMaxMarks > 0 ? (totalScore / totalMaxMarks) * 105 / 105 * 100 : 0
+                      const isPass = scorePct >= 50
+
+                      const hasPendingManual = selectedResponseDetail.questionDetails.some(qd => qd.type === "long_answer") && selectedResponseDetail.gradedStatus === "Pending Grading"
+
+                      return (
+                        <Card className="border border-slate-200 bg-white rounded-xl shadow-xs p-4 space-y-4 font-sans">
+                          <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider border-b pb-2">Grading Summary</h4>
+                          
+                          {/* Score visualizer */}
+                          <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl text-center space-y-1">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Cumulative Score</p>
+                            <p className="text-3xl font-mono font-black text-slate-850 mt-1">
+                              {totalScore} <span className="text-sm font-sans font-bold text-slate-500">/ {totalMaxMarks}</span>
+                            </p>
+                            <p className={cn("text-[10px] font-bold uppercase tracking-wider mt-1.5", isPass ? "text-emerald-600" : "text-amber-600")}>
+                              Grade: {scorePct.toFixed(0)}% ({isPass ? "PASS" : "FAIL"})
+                            </p>
+                            
+                            {/* Progress bar */}
+                            <div className="h-2 w-full bg-slate-200/70 rounded-full overflow-hidden mt-3">
+                              <div 
+                                className={cn("h-full rounded-full transition-all duration-300", isPass ? "bg-emerald-500" : "bg-amber-500")}
+                                style={{ width: `${Math.min(100, scorePct)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Quick checklist of question marks */}
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Question Marks Index</p>
+                            <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                              {selectedResponseDetail.questionDetails.map((qd, index) => {
+                                const val = evaluationMarks[qd.questionId] !== undefined ? evaluationMarks[qd.questionId] : qd.allocatedMarks
+                                return (
+                                  <div key={qd.questionId} className="flex justify-between items-center text-xs border-b border-slate-100 py-1 font-medium text-slate-600">
+                                    <span className="flex items-center gap-1">
+                                      <span className="size-4 rounded bg-slate-100 text-slate-500 font-bold text-[9px] flex items-center justify-center">Q{index + 1}</span>
+                                      <span className="text-[10px] text-slate-500 font-mono font-bold">({qd.type.replace("_", " ")})</span>
+                                    </span>
+                                    <span className="font-mono font-bold text-slate-850">{val} / {qd.marks}</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Manual Grading Warning */}
+                          {hasPendingManual && (
+                            <div className="p-3 bg-amber-50 border border-amber-200 text-[10px] text-amber-700 font-bold rounded-xl flex items-start gap-2 animate-pulse">
+                              <AlertCircle className="size-4.5 shrink-0" />
+                              <span>This paper contains subjective long answers. Review marks and click 'Save Evaluation' to finalize the candidate's score.</span>
+                            </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="space-y-2 pt-2 border-t border-slate-100">
+                            <Button 
+                              onClick={handleSaveEvaluation}
+                              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider h-10 rounded-xl shadow-md shadow-indigo-600/10 transition-all hover:-translate-y-0.5"
+                            >
+                              Save Evaluation & Close
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              onClick={() => setIsDetailResponseOpen(false)}
+                              className="w-full text-slate-600 border-slate-200 text-xs font-bold uppercase tracking-wider h-9 rounded-xl"
+                            >
+                              Discard Changes
+                            </Button>
+                          </div>
+
+                        </Card>
+                      )
+                    })()}
+
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          ) : (
+            <div className="p-8 text-center text-slate-400 italic">
+              No response sheet loaded.
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

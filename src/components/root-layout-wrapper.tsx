@@ -36,7 +36,7 @@ export default function RootLayoutWrapper({ children }: { children: React.ReactN
       } finally {
         const loggedIn = localStorage.getItem("tuitionflow_logged_in") === "true"
         setIsLoggedIn(loggedIn)
-        const isPublicPath = isLoginPage || pathname === "/"
+        const isPublicPath = isLoginPage || pathname === "/" || pathname?.startsWith("/admission-test")
         if (!loggedIn && !isPublicPath) {
           router.push("/login")
         } else if (loggedIn && isLoginPage) {
@@ -88,8 +88,9 @@ export default function RootLayoutWrapper({ children }: { children: React.ReactN
   }
 
   const showLandingLayout = pathname === "/" && !isLoggedIn
+  const isAdmissionTestPage = pathname?.startsWith("/admission-test")
 
-  if (isLoginPage || showLandingLayout) {
+  if (isLoginPage || showLandingLayout || isAdmissionTestPage) {
     return (
       <>
         {children}
