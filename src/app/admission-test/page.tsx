@@ -541,7 +541,7 @@ export default function AdmissionTestPage() {
               {/* Questions List */}
               <div className="space-y-5">
                 {exam.questions.map((q, idx) => (
-                  <Card key={q.id} className="border border-slate-200/80 bg-white shadow-sm rounded-xl overflow-hidden">
+                  <Card key={q.id} id={`question-card-${q.id}`} className="border border-slate-200/80 bg-white shadow-sm rounded-xl overflow-hidden scroll-mt-6">
                     <CardHeader className="bg-slate-50/45 border-b py-3.5 px-5 flex flex-row items-start justify-between gap-4">
                       <span className="font-bold text-slate-800 text-xs font-serif">
                         Question {idx + 1}
@@ -569,21 +569,21 @@ export default function AdmissionTestPage() {
                                 type="button"
                                 onClick={() => handleMcqSelect(q.id, opt.id)}
                                 className={cn(
-                                  "flex items-center gap-3 px-4 py-3 rounded-xl border font-sans text-xs text-left transition-all",
+                                  "flex items-center gap-3 px-4 py-3 rounded-xl border font-sans text-xs text-left transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] cursor-pointer",
                                   isSelected 
-                                    ? "border-indigo-600 bg-indigo-50/40 text-indigo-900 font-semibold ring-2 ring-indigo-600/15 shadow-sm" 
-                                    : "border-slate-200 bg-white hover:border-indigo-300 text-slate-700 hover:bg-slate-50/50"
+                                    ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 font-semibold ring-2 ring-indigo-500/20 shadow-md shadow-indigo-500/5" 
+                                    : "border-slate-200 bg-white hover:border-indigo-300 text-slate-700 hover:bg-slate-50/30 hover:shadow-sm"
                                 )}
                               >
                                 <span className={cn(
-                                  "size-5 rounded-full border flex items-center justify-center font-bold text-[10px] shrink-0 font-mono transition-colors",
+                                  "size-5 rounded-full border flex items-center justify-center font-bold text-[10px] shrink-0 font-mono transition-all duration-200",
                                   isSelected 
-                                    ? "bg-indigo-600 border-indigo-600 text-white" 
+                                    ? "bg-indigo-600 border-indigo-600 text-white scale-110 shadow-sm" 
                                     : "border-slate-300 text-slate-400 bg-white"
                                 )}>
                                   {opt.id}
                                 </span>
-                                <span>{opt.text}</span>
+                                <span className="flex-1 leading-snug">{opt.text}</span>
                               </button>
                             )
                           })}
@@ -602,21 +602,21 @@ export default function AdmissionTestPage() {
                                 type="button"
                                 onClick={() => handleCheckboxToggle(q.id, opt.id, !isSelected)}
                                 className={cn(
-                                  "flex items-center gap-3 px-4 py-3 rounded-xl border font-sans text-xs text-left transition-all",
+                                  "flex items-center gap-3 px-4 py-3 rounded-xl border font-sans text-xs text-left transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] cursor-pointer",
                                   isSelected 
-                                    ? "border-indigo-600 bg-indigo-50/40 text-indigo-900 font-semibold ring-2 ring-indigo-600/15 shadow-sm" 
-                                    : "border-slate-200 bg-white hover:border-indigo-300 text-slate-700 hover:bg-slate-50/50"
+                                    ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 font-semibold ring-2 ring-indigo-500/20 shadow-md shadow-indigo-500/5" 
+                                    : "border-slate-200 bg-white hover:border-indigo-300 text-slate-700 hover:bg-slate-50/30 hover:shadow-sm"
                                 )}
                               >
                                 <span className={cn(
-                                  "size-5 rounded border flex items-center justify-center font-bold text-[10px] shrink-0 font-mono transition-colors",
+                                  "size-5 rounded border flex items-center justify-center font-bold text-[10px] shrink-0 font-mono transition-all duration-200",
                                   isSelected 
-                                    ? "bg-indigo-600 border-indigo-600 text-white" 
+                                    ? "bg-indigo-600 border-indigo-600 text-white scale-110 shadow-sm" 
                                     : "border-slate-300 text-slate-400 bg-white"
                                 )}>
                                   {opt.id}
                                 </span>
-                                <span>{opt.text}</span>
+                                <span className="flex-1 leading-snug">{opt.text}</span>
                               </button>
                             )
                           })}
@@ -657,7 +657,7 @@ export default function AdmissionTestPage() {
                 <Button
                   onClick={() => submitExamAnswers(false)}
                   disabled={isSubmitting}
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-sans font-bold text-xs uppercase tracking-wider h-11 px-8 text-white shadow-lg shadow-indigo-600/10 transition-all hover:-translate-y-0.5"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] active:translate-y-0 font-sans font-bold text-xs uppercase tracking-wider h-11 px-8 text-white shadow-lg shadow-indigo-600/10 hover:shadow-xl hover:shadow-indigo-600/20 transition-all hover:-translate-y-0.5"
                 >
                   {isSubmitting ? "Submitting Assessment..." : "Submit Admission Test"}
                 </Button>
@@ -719,18 +719,25 @@ export default function AdmissionTestPage() {
                     {exam.questions.map((q, idx) => {
                       const isAnswered = answers[q.id] && (Array.isArray(answers[q.id]) ? (answers[q.id] as string[]).length > 0 : answers[q.id].toString().trim().length > 0)
                       return (
-                        <div
+                        <button
                           key={q.id}
+                          type="button"
+                          onClick={() => {
+                            const el = document.getElementById(`question-card-${q.id}`)
+                            if (el) {
+                              el.scrollIntoView({ behavior: "smooth", block: "start" })
+                            }
+                          }}
                           className={cn(
-                            "aspect-square rounded-lg flex items-center justify-center text-xs font-bold font-mono border transition-all",
+                            "aspect-square rounded-lg flex items-center justify-center text-xs font-bold font-mono border transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer",
                             isAnswered 
-                              ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-xs" 
-                              : "bg-slate-50 border-slate-200 text-slate-400"
+                              ? "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 shadow-sm shadow-indigo-100/30" 
+                              : "bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300 hover:bg-slate-100/50"
                           )}
-                          title={`Question ${idx + 1}`}
+                          title={`Jump to Question ${idx + 1}`}
                         >
                           {idx + 1}
-                        </div>
+                        </button>
                       )
                     })}
                   </div>

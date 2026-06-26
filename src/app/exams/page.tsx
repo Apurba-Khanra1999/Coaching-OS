@@ -2046,7 +2046,8 @@ export default function ExamsPage() {
                   {selectedExam.questions.map((q, idx) => (
                     <div key={q.id} className="space-y-3 leading-relaxed text-sm">
                       
-                      {/* Question Header (Te                      <div className="flex items-start justify-between gap-4">
+                      {/* Question Header (Text, MCQ, Checkbox, etc.) */}
+                      <div className="flex items-start justify-between gap-4">
                         <div className="space-y-1 font-serif">
                           <p className="text-slate-950 font-medium">
                             <span className="font-bold mr-1.5">Q{idx + 1}.</span>
