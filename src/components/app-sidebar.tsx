@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Settings,
   BookOpen,
+  FileQuestion,
   Bell,
   Briefcase,
   Receipt,
@@ -140,6 +141,7 @@ export function AppSidebar() {
           { name: "Batches", icon: Layers, href: "/batches" },
           { name: "Attendance", icon: CalendarCheck, href: "/attendance" },
           { name: "Schedule", icon: Calendar, href: "/schedule" },
+          { name: "Exams", icon: FileQuestion, href: "/exams" },
         ]
       },
       {
@@ -191,6 +193,7 @@ export function AppSidebar() {
           { name: "My Batches", icon: Layers, href: "/batches" },
           { name: "My Classes", icon: Calendar, href: "/schedule" },
           { name: "My Fees Ledger", icon: CreditCard, href: "/fees" },
+          { name: "My Exams", icon: FileQuestion, href: "/exams" },
         ]
       },
       {
@@ -208,6 +211,7 @@ export function AppSidebar() {
           { name: "Parent Hub", icon: LayoutDashboard, href: "/" },
           { name: "Child Schedule", icon: Calendar, href: "/schedule" },
           { name: "Child Fees & Payments", icon: CreditCard, href: "/fees" },
+          { name: "Child Exams", icon: FileQuestion, href: "/exams" },
         ]
       },
       {

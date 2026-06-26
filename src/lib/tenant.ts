@@ -968,4 +968,205 @@ export const mockNotificationsGenerator = (tenantId: string): Notification[] => 
   ]
 }
 
+// ==========================================
+// Exams & Questions Types & Generators
+// ==========================================
+
+export interface QuestionOption {
+  id: string
+  text: string
+}
+
+export interface Question {
+  id: string
+  type: "mcq" | "checkbox" | "short_answer" | "long_answer"
+  questionText: string
+  options?: QuestionOption[]
+  correctAnswer: string | string[]
+  marks: number
+}
+
+export interface Exam {
+  id: string
+  title: string
+  description: string
+  duration: number // minutes
+  totalMarks: number
+  targetType: "batch" | "student"
+  targetBatchId?: string
+  targetStudentId?: string
+  status: "Draft" | "Published" | "Completed"
+  createdAt: string
+  scheduledDate?: string
+  scheduledTime?: string
+  questions: Question[]
+}
+
+export const mockExamsGenerator = (tenantId: string): Exam[] => {
+  const isApex = tenantId === "inst_002"
+  const isHorizon = tenantId === "inst_003"
+  
+  const batch1 = isApex ? "apex-alpha" : isHorizon ? "horizon-alpha" : "batch-alpha"
+  const batch2 = isApex ? "apex-beta" : isHorizon ? "horizon-beta" : "batch-beta"
+  
+  return [
+    {
+      id: "EXM-101",
+      title: isApex ? "Physics Mechanics & Kinematics Prep" : isHorizon ? "SAT Diagnostic Practice Exam" : "Mathematics Algebra Term Assessment",
+      description: "Comprehensive testing covering fundamental concepts, problem solving, and analytical calculations.",
+      duration: isHorizon ? 120 : 90,
+      totalMarks: 80,
+      targetType: "batch",
+      targetBatchId: batch1,
+      status: "Published",
+      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      scheduledDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      scheduledTime: "10:00",
+      questions: [
+        {
+          id: "Q-1",
+          type: "mcq",
+          questionText: isApex 
+            ? "A car accelerates uniformly from rest to a speed of 20 m/s in 5 seconds. What is its acceleration?" 
+            : isHorizon 
+              ? "If 3x + 5 = 20, what is the value of 6x - 10?"
+              : "Solve for x in the quadratic equation: x^2 - 5x + 6 = 0.",
+          options: isApex
+            ? [
+                { id: "A", text: "2 m/s²" },
+                { id: "B", text: "4 m/s²" },
+                { id: "C", text: "8 m/s²" },
+                { id: "D", text: "10 m/s²" }
+              ]
+            : isHorizon
+              ? [
+                { id: "A", text: "10" },
+                { id: "B", text: "20" },
+                { id: "C", text: "30" },
+                { id: "D", text: "40" }
+              ]
+              : [
+                { id: "A", text: "x = 2 or x = 3" },
+                { id: "B", text: "x = -2 or x = -3" },
+                { id: "C", text: "x = 1 or x = 5" },
+                { id: "D", text: "x = 0 or x = 6" }
+              ],
+          correctAnswer: isApex ? "B" : isHorizon ? "B" : "A",
+          marks: 10
+        },
+        {
+          id: "Q-2",
+          type: "checkbox",
+          questionText: isApex
+            ? "Which of the following are vector quantities? (Select all that apply)"
+            : isHorizon
+              ? "Identify the prime numbers from the list below: (Select all that apply)"
+              : "Which of the following values are roots of the equation x³ - 6x² + 11x - 6 = 0? (Select all that apply)",
+          options: isApex
+            ? [
+                { id: "A", text: "Velocity" },
+                { id: "B", text: "Speed" },
+                { id: "C", text: "Acceleration" },
+                { id: "D", text: "Mass" }
+              ]
+            : isHorizon
+              ? [
+                { id: "A", text: "13" },
+                { id: "B", text: "15" },
+                { id: "C", text: "17" },
+                { id: "D", text: "21" }
+              ]
+              : [
+                { id: "A", text: "x = 1" },
+                { id: "B", text: "x = 2" },
+                { id: "C", text: "x = 3" },
+                { id: "D", text: "x = 4" }
+              ],
+          correctAnswer: isApex ? ["A", "C"] : isHorizon ? ["A", "C"] : ["A", "B", "C"],
+          marks: 15
+        },
+        {
+          id: "Q-3",
+          type: "short_answer",
+          questionText: isApex
+            ? "What is the SI unit of force?"
+            : isHorizon
+              ? "What is the value of 2 raised to the power of 8?"
+              : "Find the value of x that satisfies log₂(x) = 5.",
+          correctAnswer: isApex ? "Newton" : isHorizon ? "256" : "32",
+          marks: 15
+        },
+        {
+          id: "Q-4",
+          type: "long_answer",
+          questionText: isApex
+            ? "State and explain Newton's Three Laws of Motion with real-world examples."
+            : isHorizon
+              ? "Discuss the main themes of Shakespeare's Macbeth and explain how the character of Lady Macbeth evolves."
+              : "Explain the concept of Mathematical Induction. Outline the steps to prove that the sum of the first n positive integers is n(n+1)/2.",
+          correctAnswer: "Student must explain in detail the requested concepts.",
+          marks: 40
+        }
+      ]
+    },
+    {
+      id: "EXM-102",
+      title: isApex ? "Organic Chemistry Basic Nomenclature" : isHorizon ? "Vocabulary and Grammar Diagnostic" : "Basic Geometry & Coordinate Systems",
+      description: "Introduction test focusing on definitions, shapes, core vocabulary, and simple formulas.",
+      duration: 45,
+      totalMarks: 50,
+      targetType: "batch",
+      targetBatchId: batch2,
+      status: "Draft",
+      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      scheduledDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      scheduledTime: "14:30",
+      questions: [
+        {
+          id: "Q-1",
+          type: "mcq",
+          questionText: isApex
+            ? "What is the chemical formula for Methane?"
+            : isHorizon
+              ? "Choose the word that is closest in meaning to 'ABUNDANT'."
+              : "What is the sum of the interior angles of a regular hexagon?",
+          options: isApex
+            ? [
+                { id: "A", text: "CH4" },
+                { id: "B", text: "C2H6" },
+                { id: "C", text: "C3H8" },
+                { id: "D", text: "CO2" }
+              ]
+            : isHorizon
+              ? [
+                { id: "A", text: "Scarce" },
+                { id: "B", text: "Plentiful" },
+                { id: "C", text: "Valuable" },
+                { id: "D", text: "Complex" }
+              ]
+              : [
+                { id: "A", text: "360 degrees" },
+                { id: "B", text: "540 degrees" },
+                { id: "C", text: "720 degrees" },
+                { id: "D", text: "900 degrees" }
+              ],
+          correctAnswer: isApex ? "A" : isHorizon ? "B" : "C",
+          marks: 20
+        },
+        {
+          id: "Q-2",
+          type: "long_answer",
+          questionText: isApex
+            ? "Describe the differences between alkanes, alkenes, and alkynes in terms of bonding and saturation."
+            : isHorizon
+              ? "Write a short essay (150-200 words) describing the impact of social media on communication in modern families."
+              : "State the Pythagorean Theorem and show how to calculate the distance between the points (1, 2) and (4, 6) in a Cartesian plane.",
+          correctAnswer: "Detailed explanation with appropriate formulas and arguments.",
+          marks: 30
+        }
+      ]
+    }
+  ]
+}
+
 

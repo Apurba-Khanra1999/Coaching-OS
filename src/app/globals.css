@@ -85,6 +85,7 @@
   /* Reset Radix Dialog Content styles to sit cleanly on the printed page */
   div[role="dialog"] {
     position: absolute !important;
+    display: block !important; /* Force block layout to prevent flexbox height rendering bugs in print */
     left: 0 !important;
     top: 0 !important;
     transform: none !important;
@@ -99,13 +100,20 @@
     margin: 0 !important;
   }
 
-  /* Ensure ScrollArea allows full content visibility and does not overflow/clip */
+  /* Ensure ScrollArea and custom scrollable content wrappers allow full content visibility without clipping */
   div[role="dialog"] [class*="max-h-[85vh]"],
   div[role="dialog"] .ScrollArea,
-  div[role="dialog"] [data-radix-scroll-area-viewport] {
+  div[role="dialog"] [data-radix-scroll-area-viewport],
+  div[role="dialog"] .overflow-y-auto,
+  div[role="dialog"] [class*="overflow-y-auto"],
+  div[role="dialog"] .flex-1,
+  div[role="dialog"] [class*="flex-1"] {
+    display: block !important;
     max-height: none !important;
     height: auto !important;
+    min-height: auto !important;
     overflow: visible !important;
+    flex: none !important;
   }
 
   /* Hide scrollbars completely on print */
