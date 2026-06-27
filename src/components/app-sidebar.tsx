@@ -7,6 +7,7 @@ import {
   Layers,
   Calendar,
   CalendarCheck,
+  CalendarDays,
   CreditCard,
   GraduationCap,
   MessageSquare,
@@ -19,6 +20,7 @@ import {
   UserCog,
   QrCode,
   Package,
+  Award,
   LogOut
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -142,6 +144,8 @@ export function AppSidebar() {
           { name: "Attendance", icon: CalendarCheck, href: "/attendance" },
           { name: "Schedule", icon: Calendar, href: "/schedule" },
           { name: "Exams", icon: FileQuestion, href: "/exams" },
+          { name: "Results", icon: Award, href: "/results" },
+          { name: "Holidays", icon: CalendarDays, href: "/holidays" },
         ]
       },
       {
@@ -172,6 +176,7 @@ export function AppSidebar() {
           { name: "Teacher Hub", icon: LayoutDashboard, href: "/" },
           { name: "Assigned Batches", icon: Layers, href: "/batches" },
           { name: "Mark Attendance", icon: CalendarCheck, href: "/attendance" },
+          { name: "Results Manager", icon: Award, href: "/results" },
           { name: "My Schedule", icon: Calendar, href: "/schedule" },
           { name: "My Payroll & Payslips", icon: Briefcase, href: "/hr" },
         ]
@@ -180,6 +185,7 @@ export function AppSidebar() {
         label: "General",
         items: [
           { name: "Notifications", icon: Bell, href: "/notifications" },
+          { name: "Holidays", icon: CalendarDays, href: "/holidays" },
           { name: "Settings", icon: Settings, href: "/settings" },
         ]
       }
@@ -194,12 +200,14 @@ export function AppSidebar() {
           { name: "My Classes", icon: Calendar, href: "/schedule" },
           { name: "My Fees Ledger", icon: CreditCard, href: "/fees" },
           { name: "My Exams", icon: FileQuestion, href: "/exams" },
+          { name: "My Results", icon: Award, href: "/results" },
         ]
       },
       {
         label: "General",
         items: [
           { name: "Notifications", icon: Bell, href: "/notifications" },
+          { name: "Holidays", icon: CalendarDays, href: "/holidays" },
         ]
       }
     ]
@@ -212,12 +220,14 @@ export function AppSidebar() {
           { name: "Child Schedule", icon: Calendar, href: "/schedule" },
           { name: "Child Fees & Payments", icon: CreditCard, href: "/fees" },
           { name: "Child Exams", icon: FileQuestion, href: "/exams" },
+          { name: "Child Results", icon: Award, href: "/results" },
         ]
       },
       {
         label: "General",
         items: [
           { name: "Notifications", icon: Bell, href: "/notifications" },
+          { name: "Holidays", icon: CalendarDays, href: "/holidays" },
           { name: "Settings", icon: Settings, href: "/settings" },
         ]
       }
