@@ -1,34 +1,34 @@
 # Coaching OS
 
-Coaching OS is a multi-tenant SaaS educational management platform designed for tuition centers, coaching institutes, competitive exam preparation academies, and private tutors. It provides a unified portal to coordinate student lifecycle management, attendance logs, fee collections, teacher payrolls, parent communications, asset tracking, and operations analytics.
+Coaching OS is a high-fidelity, multi-tenant SaaS educational management platform designed for tuition centers, coaching academies, competitive exam preparation institutes, and private tutoring organizations. It provides a unified, local-first dashboard to coordinate student lifecycle CRM, automated attendance tracking, fee invoicing, UPI QR payments, teacher payroll, parent communications, asset inventory, exam results ledger, and holidays scheduling.
 
 ---
 
 ## 🏢 Multi-Tenant & Role-Based Access Control (RBAC)
 
-The application implements strict data isolation using tenant scoping and provides role-specific dashboards and menu items.
+The platform implements strict data isolation using tenant scoping (`inst_001`, `inst_002`, `inst_003`) and provisions role-specific dashboards, navigation links, and administrative capabilities.
 
 ### User Roles & Navigation Scopes
 
 | Role | Scope & Permissions |
 | :--- | :--- |
-| **Super Admin** | Platform-wide access. Manages active tenants, subscription levels, global billing tiers, and system database sync audit logs. |
-| **Institute Owner** | Executive control over a single tenant workspace. Manages students, teachers, batches, credentials, assets, fee structures, expenses, HR payroll, and institute-wide settings. |
-| **Teacher** | Scoped workspace access. Marks attendance for assigned batches, views class schedules, manages timetable items, and tracks salary payouts. |
-| **Student** | Personal portal access. Views active class schedules, tracks batch syllabi, monitors attendance history, and pays outstanding fee invoices. |
-| **Parent** | Linked student portal access. Monitors child attendance scores, checks class schedules, and completes online fee invoice payments. |
+| **Super Admin** | Platform-wide administration. Manages active tenant spaces, subscription billing tiers, global limits, and system-wide database sync audit logs. |
+| **Institute Owner** | Executive control over a single tenant workspace. Manages students, teachers, batches, credentials, assets, fee structures, expenses, HR payroll, exam results, holiday calendars, and branding settings. |
+| **Teacher** | Scoped academic access. Marks attendance for assigned batches, views class timetables, logs syllabus progress, publishes/edits exam scores for their classes, and tracks salary payouts. |
+| **Student** | Personal student portal. Tracks class schedules, monitors attendance logs, views personal exam scorecards with progress trajectories, and reviews/pays outstanding fee invoices. |
+| **Parent** | Linked student portal. Monitors their child's attendance ratings, checks class schedules, views school holiday calendars, inspects academic report cards with teacher remarks, and completes online fee invoice payments. |
 
 ---
 
 ## 🚀 Key Modules & Features
 
 ### 1. Bento-Grid Analytics Dashboards
-* **Role-Specific Views**: Dashboards adapt to the logged-in role (Owner, Teacher, Student, Parent) to present relevant KPIs.
+* **Role-Specific Adaptation**: Dashboards dynamically adapt to the logged-in role (Owner, Teacher, Student, Parent) to render relevant KPIs.
 * **Financial Metric Cards**: Tracks total income, monthly recurring revenue, pending fees, and estimated fee leakage.
 * **Operational Widgets**: Renders active student enrollments, batch counts, classroom schedules, and quick actions.
 
 ### 2. Student Directory CRM & Profiles
-* **Lifecycle Management**: Tracks student enrollments, batches, profiles, and statuses (Active, On Leave, Suspended).
+* **Lifecycle Management**: Tracks student enrollments, batches, profiles, and statuses (*Active*, *On Leave*, *Suspended*).
 * **Detailed Profile Pages**: Displays academic progress, attendance percentage charts, active fee invoices, and guardian contact details.
 * **Roster Export**: Supports exporting student records to CSV format for external analysis.
 
@@ -92,11 +92,37 @@ The application implements strict data isolation using tenant scoping and provid
 * **Operating Expense Logs**: Registers bills, rent payments, salary disbursements, and stationery purchases.
 * **Financial Analytics**: Recharts charts demonstrating expenses broken down by categories and monthly comparisons.
 
-### 13. Centralized System Settings
+### 13. Exam Results Ledger
+* **Double-Sided Performance Portals**:
+  * **Management View (Owners & Teachers)**: Features aggregated performance metrics (Total Exams, Class Average %, Pass Rate %, Toppers), interactive Recharts comparative batch-performance charts, and a comprehensive historical results ledger.
+  * **Scorecard View (Students)**: Displays individual scorecards, subject-specific grade sheets, teacher remarks, and a Recharts progress trajectory chart comparing their scores to the class average.
+  * **Report Card View (Parents)**: Displays the child's academic performance tracker, grades, teacher feedback, chronological progress charts, and comparative stats.
+* **Interactive Scoresheet Drawer**: A step-by-step wizard to create and publish exams. Includes inputs for Subjective/Objective maximum marks, target batches, and scores.
+* **Strict Batch Roster Scoping**: Automatically resolves target batch IDs and scopes the scoring sheet to display **only** students enrolled in that specific batch, ensuring data accuracy.
+* **Database Sync & RBAC**: Integrated with Neon DB via JSONB sync, and strict role permissions.
+
+### 14. Interactive Holidays Manager
+* **Glassmorphic Countdown Banner**: A premium, visually striking ticker displaying a ticking clock and days count to the **Next Scheduled Holiday** (or displaying an ongoing break notice), boosting UX excitement.
+* **KPI Metrics Cards**: Highlights key stats: *Total Holidays*, *Upcoming Closures*, *Longest Break* (vacation span), and *Emergency Closures*.
+* **Interactive Monthly Calendar Grid**: A standard 42-day monthly grid that renders the days of the week, highlights today's date, and styles sibling month days in a muted color.
+  * **Holiday Badges (Desktop)**: Renders colored horizontal badges directly inside cell grids for overlapping holidays, color-coded by category (National: rose, Academic: indigo, Regional: purple, Emergency: amber).
+  * **Compact Dots (Mobile)**: Auto-collapses detailed text badges into small, clean colored indicator dots on mobile screens to prevent layout overflow.
+  * **Interactive Date Selection**: Clicking a day highlights it and updates the selected day details panel immediately.
+  * **Quick Add Trigger**: Clicking or double-clicking an empty grid day (as Owner) pre-populates the Start/End dates and launches the holiday scheduler modal.
+* **Dual-View Workspace Tabs**: Allows users to toggle between **Calendar Grid** and a chronological **Timeline Ledger** for list-based analyses with search queries and category filters.
+* **Daily Schedule Details Panel (Sidebar)**: A dedicated interactive panel showing full descriptions, date ranges, and categories for holidays falling on the selected date.
+  * **Quick Action Controls (Owner Only)**: Renders **Edit** and **Retract** buttons for active holidays in the details list.
+* **Seeded Category Distribution Metrics**: Renders visual progress bars detailing the distribution percentage of holidays across categories (National, Regional, Academic, Emergency, Other) on the timeline tab.
+* **Overlap & Date Range Safety Engine**:
+  * Enforces that End Date is on or after Start Date (`endDate >= startDate`).
+  * Displays a real-time warning banner inside the dialog if the newly input dates overlap with another scheduled closure.
+* **Role-Based Protection Gate**: Renders the identical visual layout (countdown ticker, KPI cards, calendar, timeline, search) but **strictly read-only** for Teachers, Students, and Parents, hiding administrative actions (Add, Edit, Delete, quick-add cues) from the DOM.
+
+### 15. Centralized System Settings
 * **Tenant Branding**: Configure institute name, tagline, custom logo text, and operational settings.
 * **System Rules**: Customize payment configurations, current academic sessions, and default credentials.
 
-### 14. Super-Admin Console
+### 16. Super-Admin Console
 * **Tenant Provisioning**: Add, edit, or suspend institute sub-tenant accounts.
 * **Subscription Billing**: Manages global subscription plans and tier limits.
 * **System Logs**: Audits background database synchronization calls.
@@ -145,10 +171,12 @@ coaching-os/
     │   ├── credentials/       # Workspace credentials manager
     │   ├── expenses/          # Operational expenses logging tracker
     │   ├── fees/              # Student billing ledgers & invoice creator
+    │   ├── holidays/          # Monthly calendar & holiday timeline manager
     │   ├── hr/                # Instructor payroll workspace & leave logger
     │   ├── login/             # Dynamic login portal routes for all roles
     │   ├── notifications/     # Scoped system audit alerts and messages
     │   ├── online-payments/   # UPI QR payment profiles and gateway verifications
+    │   ├── results/           # Exam results publisher & student scorecards
     │   ├── schedule/          # Timetable calendar modules
     │   ├── settings/          # Tenant setup & branding controls
     │   ├── students/          # Student directory & academic profiles
